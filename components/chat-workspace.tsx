@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Copy,
   Database,
+  Github,
   Loader2,
   Menu,
   MessageSquare,
@@ -578,6 +579,9 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               >
                 <Database size={17} />
               </button>
+              <a className="icon-button" href="https://github.com/chaobin0701/agent-studio" target="_blank" rel="noopener noreferrer" aria-label="查看 Agent Studio GitHub 仓库">
+                <Github size={17} aria-hidden="true" />
+              </a>
               <Link className="icon-button" href="/" aria-label="返回首页">
                 <ArrowUpRight size={17} />
               </Link>
