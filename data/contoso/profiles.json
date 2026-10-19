@@ -1,0 +1,74 @@
+[
+  {
+    "id": "contoso-1",
+    "customerId": "1",
+    "name": "John Smith",
+    "avatar": "#e7f0ff"
+  },
+  {
+    "id": "contoso-2",
+    "customerId": "2",
+    "name": "Jane Doe",
+    "avatar": "#e5f1ec"
+  },
+  {
+    "id": "contoso-3",
+    "customerId": "3",
+    "name": "Michael Johnson",
+    "avatar": "#fff1df"
+  },
+  {
+    "id": "contoso-4",
+    "customerId": "4",
+    "name": "Sarah Lee",
+    "avatar": "#e7f0ff"
+  },
+  {
+    "id": "contoso-5",
+    "customerId": "5",
+    "name": "David Kim",
+    "avatar": "#e5f1ec"
+  },
+  {
+    "id": "contoso-6",
+    "customerId": "6",
+    "name": "Emily Rodriguez",
+    "avatar": "#fff1df"
+  },
+  {
+    "id": "contoso-7",
+    "customerId": "7",
+    "name": "Jason Brown",
+    "avatar": "#e7f0ff"
+  },
+  {
+    "id": "contoso-8",
+    "customerId": "8",
+    "name": "Melissa Davis",
+    "avatar": "#e5f1ec"
+  },
+  {
+    "id": "contoso-9",
+    "customerId": "9",
+    "name": "Daniel Wilson",
+    "avatar": "#fff1df"
+  },
+  {
+    "id": "contoso-10",
+    "customerId": "10",
+    "name": "Amanda Perez",
+    "avatar": "#e7f0ff"
+  },
+  {
+    "id": "contoso-11",
+    "customerId": "11",
+    "name": "Robert Johnson",
+    "avatar": "#e5f1ec"
+  },
+  {
+    "id": "contoso-12",
+    "customerId": "12",
+    "name": "Karen Williams",
+    "avatar": "#fff1df"
+  }
+]

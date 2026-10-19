@@ -1,0 +1,35 @@
+{
+  "locale": "zh-CN",
+  "datasetVersion": "contoso-zh-CN-v1",
+  "currency": "CNY",
+  "pricing": "Independent fictional CNY price book; source prices remain unchanged in the English fixtures.",
+  "sourceCommit": "028921fe3209db3216075d34ced6c109de132533",
+  "adaptation": [
+    "Chinese product, brand and fictional customer names",
+    "Chinese descriptions, technical specifications and all 20 manuals",
+    "Order IDs, quantities and 2023 dates retained; simulated amounts recalculated from the CNY price book",
+    "Original English manuals and MIT license preserved"
+  ],
+  "sourceManualSha256": {
+    "1": "99575cdebd964d7dfddf7e1e5917929d6f35b46f6f4036723ce09b5d379e95dd",
+    "2": "6d4dbc7816c9cc2a4eef44dcf3e5d55bb9e32da89b42a2e355033ae2aa68acf2",
+    "3": "4319ce144c8025bea115c5b37ebee24b2d6233bfca84b07233e4f8cda249dbf4",
+    "4": "e05a99a5e82a2c8a6ba95cf37d241b867409c71a99359e4406b5640a1f4c1d45",
+    "5": "0e8eb703d7290671a6bd504fdd80c5cd0da1afd08e89b5b32081b3dabbcf9004",
+    "6": "e7f46da138ff1fd87acc45f1c8e6b5cfd0eb9b34779987e3a01ce21493660b47",
+    "7": "847c8a6e0e1959e760fa30ae35aedc66454f38525a6b7fc1057cfaa63ecbe7c3",
+    "8": "84314033282fb7eb27a71c3f8da4de214859dfb954f6c2be56ce3a74e43426b2",
+    "9": "268ee158eb19189f63a9c516f371de694abed680d7e332f73a209f197d74bd7c",
+    "10": "e17a27fd8d134ed5864404b120c118e061f669b21a2ed0999be2a943b2efaea7",
+    "11": "9528b77f11696c2e09999903c739cd60d311225f6f704638ce5d822009007e06",
+    "12": "a3d994ee08cd8b031effb68eb08528bbf4e119745b493d0834dc1ff00ec27731",
+    "13": "ec2adee1c0464ef3071406f51f5883ce6b2f40053251be59a9ddfabce2a9f9a8",
+    "14": "ffc4a0aa06446376973550575c8d498fefcb01cbb2e6d4215ffd55c104206eda",
+    "15": "720eab94c85e240085fd27690c2f0429e68fd31a942673999cf53e99e4670b19",
+    "16": "feb226dcd63d38efbbc34c19a4ca42910686a12f5be212873a6f17717b775659",
+    "17": "23133b99a2b4b3af801ecc7fb2d2618ffbd41466faac11098244b5d3e62b8f4b",
+    "18": "cc8b794d611ff88cb6d51f96fc35cbe1640a579a77a4838f276472c477f80a83",
+    "19": "2e90fd3ee5a4b78c16060c2b013518ea32f70da456bafb111bcdc7f64410dcc8",
+    "20": "b9b43eace3c179ee73a09bbe94b087a4b350907d1270eab6d626e0482a855255"
+  }
+}

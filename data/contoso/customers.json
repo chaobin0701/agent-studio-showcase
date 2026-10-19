@@ -1,0 +1,342 @@
+[
+  {
+    "id": "1",
+    "name": "John Smith",
+    "membership": "Base",
+    "orders": [
+      {
+        "id": "29",
+        "productId": "8",
+        "quantity": 2,
+        "total": 700.0,
+        "unitPrice": 350.0,
+        "date": "2023-02-10"
+      },
+      {
+        "id": "19",
+        "productId": "5",
+        "quantity": 1,
+        "total": 60.0,
+        "unitPrice": 60.0,
+        "date": "2023-01-25"
+      },
+      {
+        "id": "1",
+        "productId": "1",
+        "quantity": 2,
+        "total": 500.0,
+        "unitPrice": 250.0,
+        "date": "2023-01-05"
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "name": "Jane Doe",
+    "membership": "Gold",
+    "orders": [
+      {
+        "id": "23",
+        "productId": "6",
+        "quantity": 1,
+        "total": 80.0,
+        "unitPrice": 80.0,
+        "date": "2023-01-30"
+      },
+      {
+        "id": "15",
+        "productId": "4",
+        "quantity": 1,
+        "total": 140.0,
+        "unitPrice": 140.0,
+        "date": "2023-01-20"
+      },
+      {
+        "id": "6",
+        "productId": "2",
+        "quantity": 1,
+        "total": 90.0,
+        "unitPrice": 90.0,
+        "date": "2023-01-10"
+      }
+    ]
+  },
+  {
+    "id": "3",
+    "name": "Michael Johnson",
+    "membership": "Base",
+    "orders": [
+      {
+        "id": "20",
+        "productId": "5",
+        "quantity": 2,
+        "total": 120.0,
+        "unitPrice": 60.0,
+        "date": "2023-02-28"
+      },
+      {
+        "id": "38",
+        "productId": "11",
+        "quantity": 1,
+        "total": 110.0,
+        "unitPrice": 110.0,
+        "date": "2023-02-25"
+      },
+      {
+        "id": "11",
+        "productId": "3",
+        "quantity": 1,
+        "total": 120.0,
+        "unitPrice": 120.0,
+        "date": "2023-01-15"
+      }
+    ]
+  },
+  {
+    "id": "4",
+    "name": "Sarah Lee",
+    "membership": "Platinum",
+    "orders": [
+      {
+        "id": "35",
+        "productId": "10",
+        "quantity": 1,
+        "total": 75.0,
+        "unitPrice": 75.0,
+        "date": "2023-02-20"
+      },
+      {
+        "id": "2",
+        "productId": "1",
+        "quantity": 1,
+        "total": 250.0,
+        "unitPrice": 250.0,
+        "date": "2023-02-10"
+      },
+      {
+        "id": "26",
+        "productId": "7",
+        "quantity": 1,
+        "total": 100.0,
+        "unitPrice": 100.0,
+        "date": "2023-02-05"
+      }
+    ]
+  },
+  {
+    "id": "5",
+    "name": "David Kim",
+    "membership": "Gold",
+    "orders": [
+      {
+        "id": "33",
+        "productId": "9",
+        "quantity": 2,
+        "total": 240.0,
+        "unitPrice": 120.0,
+        "date": "2023-03-20"
+      },
+      {
+        "id": "16",
+        "productId": "4",
+        "quantity": 2,
+        "total": 280.0,
+        "unitPrice": 140.0,
+        "date": "2023-02-25"
+      },
+      {
+        "id": "7",
+        "productId": "2",
+        "quantity": 2,
+        "total": 180.0,
+        "unitPrice": 90.0,
+        "date": "2023-02-15"
+      }
+    ]
+  },
+  {
+    "id": "6",
+    "name": "Emily Rodriguez",
+    "membership": null,
+    "orders": [
+      {
+        "id": "39",
+        "productId": "11",
+        "quantity": 2,
+        "total": 220.0,
+        "unitPrice": 110.0,
+        "date": "2023-03-30"
+      },
+      {
+        "id": "3",
+        "productId": "1",
+        "quantity": 3,
+        "total": 750.0,
+        "unitPrice": 250.0,
+        "date": "2023-03-18"
+      },
+      {
+        "id": "12",
+        "productId": "3",
+        "quantity": 2,
+        "total": 240.0,
+        "unitPrice": 120.0,
+        "date": "2023-02-20"
+      }
+    ]
+  },
+  {
+    "id": "7",
+    "name": "Jason Brown",
+    "membership": "Base",
+    "orders": [
+      {
+        "id": "36",
+        "productId": "10",
+        "quantity": 2,
+        "total": 150.0,
+        "unitPrice": 75.0,
+        "date": "2023-03-25"
+      },
+      {
+        "id": "8",
+        "productId": "2",
+        "quantity": 1,
+        "total": 90.0,
+        "unitPrice": 90.0,
+        "date": "2023-03-20"
+      },
+      {
+        "id": "27",
+        "productId": "7",
+        "quantity": 2,
+        "total": 200.0,
+        "unitPrice": 100.0,
+        "date": "2023-03-10"
+      }
+    ]
+  },
+  {
+    "id": "8",
+    "name": "Melissa Davis",
+    "membership": "Gold",
+    "orders": [
+      {
+        "id": "4",
+        "productId": "1",
+        "quantity": 2,
+        "total": 500.0,
+        "unitPrice": 250.0,
+        "date": "2023-04-22"
+      },
+      {
+        "id": "25",
+        "productId": "6",
+        "quantity": 1,
+        "total": 80.0,
+        "unitPrice": 80.0,
+        "date": "2023-04-10"
+      },
+      {
+        "id": "17",
+        "productId": "4",
+        "quantity": 1,
+        "total": 140.0,
+        "unitPrice": 140.0,
+        "date": "2023-03-30"
+      }
+    ]
+  },
+  {
+    "id": "9",
+    "name": "Daniel Wilson",
+    "membership": "Base",
+    "orders": [
+      {
+        "id": "9",
+        "productId": "2",
+        "quantity": 3,
+        "total": 270.0,
+        "unitPrice": 90.0,
+        "date": "2023-04-25"
+      },
+      {
+        "id": "40",
+        "productId": "11",
+        "quantity": 1,
+        "total": 110.0,
+        "unitPrice": 110.0,
+        "date": "2023-04-05"
+      },
+      {
+        "id": "13",
+        "productId": "3",
+        "quantity": 1,
+        "total": 120.0,
+        "unitPrice": 120.0,
+        "date": "2023-03-25"
+      }
+    ]
+  },
+  {
+    "id": "10",
+    "name": "Amanda Perez",
+    "membership": "Gold",
+    "orders": [
+      {
+        "id": "5",
+        "productId": "1",
+        "quantity": 1,
+        "total": 250.0,
+        "unitPrice": 250.0,
+        "date": "2023-05-01"
+      },
+      {
+        "id": "37",
+        "productId": "10",
+        "quantity": 1,
+        "total": 75.0,
+        "unitPrice": 75.0,
+        "date": "2023-04-30"
+      },
+      {
+        "id": "28",
+        "productId": "7",
+        "quantity": 1,
+        "total": 100.0,
+        "unitPrice": 100.0,
+        "date": "2023-04-15"
+      }
+    ]
+  },
+  {
+    "id": "11",
+    "name": "Robert Johnson",
+    "membership": "Base",
+    "orders": [
+      {
+        "id": "10",
+        "productId": "2",
+        "quantity": 2,
+        "total": 180.0,
+        "unitPrice": 90.0,
+        "date": "2023-05-05"
+      }
+    ]
+  },
+  {
+    "id": "12",
+    "name": "Karen Williams",
+    "membership": "Gold",
+    "orders": [
+      {
+        "id": "14",
+        "productId": "3",
+        "quantity": 3,
+        "total": 360.0,
+        "unitPrice": 120.0,
+        "date": "2023-04-30"
+      }
+    ]
+  }
+]
