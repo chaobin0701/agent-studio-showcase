@@ -36,6 +36,7 @@ export function SiteFooter() {
         <span>Agent Studio · 从能力，到可以亲手体验的应用。</span>
         <div className="flex gap-6">
           <Link className="footer-link" href="/projects">全部应用</Link>
+          <Link className="footer-link" href="/platform">平台技术实现</Link>
           <Link className="footer-link" href="/credits">
             开源致谢
           </Link>

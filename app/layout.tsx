@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     default: "Agent Studio · 构建、发布并运行通用 Agent",
     template: "%s · Agent Studio",
   },
-  description: "了解 Agent Studio 如何管理模型、Prompt、Skill、知识库与工具，通过 Deep Agents 运行可追溯的 Agent，并体验由平台构建的应用。",
+  description: "Agent Studio 是基于 LangChain 与 Deep Agents 的通用 Agent 构建平台，支持版本发布、知识检索、HTTP/MCP 工具接入与可追踪执行。",
 };
 export default function RootLayout({
   children,

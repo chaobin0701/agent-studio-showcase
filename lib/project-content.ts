@@ -1,6 +1,6 @@
 // Editorial overview of the current source, not a list of enabled deployment features.
 export const platformStack = [
-  ["管理与聊天端", "Vue 3 · Vben Admin · Element Plus · Vite", "管理后台与中性聊天端分开，共用 packages/chat-ui 的会话组件。"],
+  ["管理与聊天端", "Vue 3 · Element Plus · Vite", "管理端配置并发布平台资源；中性聊天端复用 packages/chat-ui 的会话组件。"],
   ["API 与服务端", "Node.js · TypeScript · NestJS · Express", "管理资源、接入鉴权与统一执行服务；Drizzle ORM 维护数据访问。"],
   ["Agent 执行", "Deep Agents · LangChain · LangGraph", "原生执行循环负责模型与能力调度，平台统一控制授权、版本和预算。"],
   ["数据与异步任务", "PostgreSQL · pgvector · pg-boss", "资源与运行记录落库，向量检索和文档任务共用 PostgreSQL 基础设施。"],
