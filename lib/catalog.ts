@@ -101,8 +101,8 @@ export const projects = [
     label: "智能体平台",
     description: "统一管理智能体、知识库与工具，把能力带到真实的交互中。",
     body: "从知识检索、故障排查到外部工具调用，Agent Studio 为这里的交互案例提供执行能力。展示站通过公开 API 接入，拥有自己的界面与示例数据。",
-    href: "http://127.0.0.1:8085/",
-    linkText: "打开本地管理后台",
+    href: process.env.NEXT_PUBLIC_AGENT_STUDIO_ADMIN_URL ?? "http://127.0.0.1:8085/",
+    linkText: "打开管理后台",
     demoSlugs: ["robot-assistant", "contoso-outdoor"],
     features: [
       { key: "agents", name: "智能体与提示词", description: "管理智能体配置、提示词与发布版本。" },

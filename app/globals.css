@@ -118,6 +118,7 @@ select:focus-visible {
   color: #6a6d80;
   font-size: 14px;
 }
+.site-github-link { display: inline-flex; align-items: center; gap: 7px; }
 .site-nav a:hover,
 .footer-link:hover {
   color: #006bff;
@@ -318,6 +319,7 @@ select:focus-visible {
   .site-nav .desktop-only {
     display: none;
   }
+  .site-github-link span { display: none; }
   .brand {
     font-size: 20px;
   }
@@ -348,6 +350,9 @@ select:focus-visible {
   .chat-inspector {
     width: min(340px, 100%);
   }
+}
+@media (max-width: 430px) {
+  .site-header .brand { font-size: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,0 +1,11 @@
+.git
+node_modules
+.next
+.data
+output
+.env*
+*.log
+*.tsbuildinfo
+.playwright-cli
+next-env.d.ts
+public/images/demo-chat.png

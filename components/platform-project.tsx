@@ -6,6 +6,7 @@ import { demosForProject } from "@/lib/catalog";
 import { platformOutline, platformStack } from "@/lib/project-content";
 
 export function PlatformProject() {
+  const adminUrl = process.env.NEXT_PUBLIC_AGENT_STUDIO_ADMIN_URL ?? "http://127.0.0.1:8085/";
   return <>
     <section className="platform-project-hero">
       <div className="site-container">
@@ -17,7 +18,7 @@ export function PlatformProject() {
             <h2>从配置资源，到执行真实任务。</h2>
             <p className="project-lead">管理 Agent、Prompt、模型、知识库和工具，把可追溯的执行能力接入自己的应用。</p>
             <div className="project-hero-actions">
-              <a href="http://127.0.0.1:8085/" target="_blank" rel="noreferrer" className="primary-button">打开本地后台 <ArrowUpRight size={16} /></a>
+              <a href={adminUrl} target="_blank" rel="noreferrer" className="primary-button">打开管理后台 <ArrowUpRight size={16} /></a>
               <a href="#applications" className="secondary-button">体验应用 <ArrowRight size={16} /></a>
             </div>
           </div>

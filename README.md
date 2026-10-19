@@ -2,6 +2,8 @@
 
 独立的 React / Node.js 项目展示站。官网采用 **Solid Free**，聊天复用 **Zola** 的对话、输入、消息、Markdown 与滚动组件。Agent Studio 作为可替换的后端适配器，通过公开 API 接入。
 
+Agent Studio 平台源码：[chaobin0701/agent-studio](https://github.com/chaobin0701/agent-studio)。
+
 ## 本地体验
 
 - 首页：<http://127.0.0.1:3300/>
@@ -109,3 +111,5 @@ POST /api/mcp                           Streamable HTTP，stateless
 ## 来源与许可
 
 完整来源提交、复用路径与修改说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，原始许可在 `licenses/`。此前的模板候选保留在 `docs/style-options.md`，历史草案在 `docs/architecture-draft.md`。
+
+本站原创代码采用 [MIT 许可](LICENSE)；引入的模板、组件、样例数据及其他第三方材料保留其各自许可，见上述来源文件。

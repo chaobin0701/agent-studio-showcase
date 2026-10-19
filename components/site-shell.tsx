@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Layers2 } from "lucide-react";
+import { ArrowUpRight, Github, Layers2 } from "lucide-react";
 import { ProjectNavigation } from "@/components/navigation-menu";
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -18,6 +18,9 @@ export function SiteHeader() {
       <nav className="site-nav" aria-label="主导航">
         <Link className="desktop-only" href="/">首页</Link>
         <ProjectNavigation />
+        <a href="https://github.com/chaobin0701/agent-studio" target="_blank" rel="noopener noreferrer" className="site-github-link" aria-label="查看 Agent Studio GitHub 仓库">
+          <Github size={17} aria-hidden="true" /><span>GitHub</span>
+        </a>
         <Link
           href="/#demos"
           className="!text-primary flex items-center gap-1"
