@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Bot, Check, ChevronDown, Layers2, Tent, X } from "lucide-react";
+import { Bot, Check, ChevronDown, Tent, X } from "lucide-react";
 import { demos, projects, type DemoSlug } from "@/lib/catalog";
 
 function NavigationMenu({ label, children, disabled = false, className = "", openOnHover = false }: {
@@ -59,11 +59,11 @@ function NavigationMenu({ label, children, disabled = false, className = "", ope
 
 export function ProjectNavigation() {
   return (
-    <NavigationMenu label="项目" className="project-navigation" openOnHover>
-      <p className="navigation-caption">探索项目</p>
+    <NavigationMenu label="应用" className="project-navigation" openOnHover>
+      <p className="navigation-caption">探索应用</p>
       {projects.map((project) => (
         <Link key={project.slug} href={`/projects/${project.slug}`} className="navigation-option">
-          <span className="navigation-option-icon">{project.slug === "agent-studio" ? <Layers2 size={18} /> : project.slug === "robot-lab" ? <Bot size={18} /> : <Tent size={18} />}</span>
+          <span className="navigation-option-icon">{project.slug === "robot-lab" ? <Bot size={18} /> : <Tent size={18} />}</span>
           <span><strong>{project.name}</strong><small>{project.label}</small></span>
         </Link>
       ))}

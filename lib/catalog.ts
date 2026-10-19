@@ -96,21 +96,6 @@ export function findDemo(slug: string) {
 }
 export const projects = [
   {
-    slug: "agent-studio",
-    name: "Agent Studio",
-    label: "智能体平台",
-    description: "统一管理智能体、知识库与工具，把能力带到真实的交互中。",
-    body: "从知识检索、故障排查到外部工具调用，Agent Studio 为这里的交互案例提供执行能力。展示站通过公开 API 接入，拥有自己的界面与示例数据。",
-    href: process.env.NEXT_PUBLIC_AGENT_STUDIO_ADMIN_URL ?? "http://127.0.0.1:8085/",
-    linkText: "打开管理后台",
-    demoSlugs: ["robot-assistant", "contoso-outdoor"],
-    features: [
-      { key: "agents", name: "智能体与提示词", description: "管理智能体配置、提示词与发布版本。" },
-      { key: "knowledge", name: "知识与检索", description: "导入资料、建立索引，让回答有据可查。" },
-      { key: "tools", name: "工具与执行", description: "接入外部服务，查看工具调用与执行过程。" },
-    ],
-  },
-  {
     slug: "contoso-outdoor",
     name: "户外装备顾问",
     label: "零售场景",
@@ -142,6 +127,5 @@ export function demosForProject(slug: string) {
 }
 export function projectForDemo(slug: string) {
   const canonical = canonicalDemoSlug(slug);
-  return projects.find((project) => project.slug !== "agent-studio" &&
-    (project.demoSlugs as readonly string[]).includes(canonical));
+  return projects.find((project) => (project.demoSlugs as readonly string[]).includes(canonical));
 }

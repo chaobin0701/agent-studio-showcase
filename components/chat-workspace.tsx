@@ -513,11 +513,11 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
           </div>
           <div className="mt-5 border-t border-[#e8eaf0] pt-4">
             <Link
-              href={`/projects/${projectForDemo(demo.slug)?.slug ?? "agent-studio"}`}
+              href={projectForDemo(demo.slug) ? `/projects/${projectForDemo(demo.slug)!.slug}` : "/"}
               className="flex items-center gap-2 px-2 text-xs text-[#888e9a]"
             >
               <ArrowLeft size={13} />
-              查看项目详情
+              查看应用详情
             </Link>
             <button type="button" className="chat-profile-trigger mt-4 flex min-h-12 w-full items-center gap-2 rounded-xl px-2 text-left"
               aria-label={`查看或切换角色：${profile.name}`} aria-controls="chat-profile-panel" aria-expanded={inspector}
@@ -601,7 +601,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                 <h2 className="text-center text-[clamp(22px,3vw,28px)] font-medium tracking-tight">
                   你好，今天有什么想聊的？
                 </h2>
-                <p className="mt-2 max-w-xl text-center text-[11px] leading-6 text-[#989eab]">
+                <p className="mt-2 max-w-xl text-center text-[13px] leading-6 text-[#66758c]">
                   {demo.description}
                 </p>
                 <div className="mt-4 w-full max-w-[760px]">

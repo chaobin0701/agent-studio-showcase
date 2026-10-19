@@ -83,18 +83,13 @@ export function ContosoData({
           <h3 className="mt-5 text-xs font-medium">已购买的装备</h3>
           {data.orders?.map((o) => (
             <div key={o.id} className="chat-data-field">
-              <Link
-                href={o.product!.href}
-                className="text-xs font-medium text-[#365b97] hover:underline"
-              >
-                {o.product?.name} ↗
-              </Link>
+              <span className="text-xs font-medium text-[#365b97]">{o.product?.name}</span>
               <p className="mt-2 text-[11px] leading-6 text-waterloo">
                 {o.date} · {o.quantity} 件 · {formatCny(o.total)}
               </p>
             </div>
           ))}
-          <h3 className="mt-6 text-xs font-medium">商品与说明书 · 20 件</h3>
+          <h3 className="mt-6 text-xs font-medium">模拟商品目录 · 20 件</h3>
           <div
             className={
               compact
@@ -103,18 +98,18 @@ export function ContosoData({
             }
           >
             {data.products.map((p) => (
-              <Link
+              <div
                 key={p.id}
-                href={p.href}
-                className="flex flex-col gap-1 border-b border-[#e8edf3] py-3 text-xs hover:text-primary"
+                className="flex flex-col gap-1 border-b border-[#e8edf3] py-3 text-xs"
               >
-                <span>{p.name} ↗</span>
+                <span>{p.name}</span>
                 <span className="text-[10px] text-waterloo">
                   {p.categoryName} · {formatCny(p.price)}
                 </span>
-              </Link>
+              </div>
             ))}
           </div>
+          <Link href="/projects/contoso-outdoor#catalog" className="mt-4 inline-block text-xs text-primary hover:underline">查看项目商品目录 ↗</Link>
           <p className="mt-5 text-[10px] leading-6 text-[#949ba9]">
             {data.dataSource.note}
           </p>

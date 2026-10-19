@@ -1,8 +1,3 @@
-export const contosoSuggestionCategories = [
-  { key: "shopping", name: "选购比较" },
-  { key: "manuals", name: "使用说明" },
-  { key: "orders", name: "购买记录" },
-] as const;
 const shopping = [
   "四个人露营，预算 2,000 元，有哪些帐篷可选？",
   "远行者 X4 四人帐篷和观星双人帐篷有什么区别？",

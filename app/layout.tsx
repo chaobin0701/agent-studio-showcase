@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
   title: {
-    default: "Agent Studio · 让智能体能力成为真实体验",
+    default: "Agent Studio · 构建、发布并运行通用 Agent",
     template: "%s · Agent Studio",
   },
-  description: "探索 Agent Studio 的智能体、知识库与工具能力，体验扫地机器人助手和户外装备顾问。",
+  description: "了解 Agent Studio 如何管理模型、Prompt、Skill、知识库与工具，通过 Deep Agents 运行可追溯的 Agent，并体验由平台构建的应用。",
 };
 export default function RootLayout({
   children,

@@ -1,8 +1,8 @@
 # Contoso Outdoor 接入记录
 
-更新日期：2026-10-17。入口：[介绍页](http://127.0.0.1:3300/demos/contoso-outdoor)、[聊天体验](http://127.0.0.1:3300/chat/contoso-outdoor)。
+更新日期：2026-10-19。入口：[介绍页与商品目录](http://127.0.0.1:3300/projects/contoso-outdoor)、[聊天体验](http://127.0.0.1:3300/chat/contoso-outdoor)。
 
-这是一个独立的“户外装备顾问” Demo，选购比较、使用说明、模拟购买记录与搭配建议属于同一位助手的能力。聊天推荐问题分选购比较、使用说明、购买记录三个分类，每次展示三题，桌面一行三列，可通过“换一组”轮换当前分类题目；点击问题填入输入框，不自动发送。客户切换开始新对话，旧会话保留。
+这是一个独立的“户外装备顾问” Demo，选购比较、使用说明、模拟购买记录与搭配建议属于同一位助手的能力。聊天推荐问题混合展示选购、说明书与购买记录，每次显示三题，桌面一行三列，可通过“换一组”轮换；点击问题填入输入框，不自动发送。客户切换开始新对话，旧会话保留。
 
 ## 资料和功能
 
@@ -53,7 +53,7 @@ POST /api/contoso/mcp
 GET /api/contoso/openapi
 ```
 
-`lib/contoso/service.ts` 管理样例领域数据；`lib/contoso/tools.ts` 管理参数校验与行为；HTTP 与 MCP 共享它们。`/api/hub/contoso` 只提供公开模拟数据供页面查看，不提供密钥。商品页面为 `/demos/contoso-outdoor/products/1` 至 `/20`。
+`lib/contoso/service.ts` 管理样例领域数据；`lib/contoso/tools.ts` 管理参数校验与行为；HTTP 与 MCP 共享它们。`/api/hub/contoso` 只提供公开模拟数据供页面查看，不提供密钥。20 件商品汇总在 `/projects/contoso-outdoor#catalog`；中文说明书由 Agent Studio 知识库检索。
 
 中文覆盖层位于 `data/contoso/zh-CN/`，按稳定 ID 映射商品、品牌、客户和说明书，独立于来源导入流程，重导入不会覆盖中文内容。订单保留 ID、数量、商品关联及日期；单价、每笔金额和总额从人民币定价表生成。规格保留原始数字与单位含义，价格字段统一为人民币模拟价格。
 

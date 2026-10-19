@@ -5,7 +5,7 @@ import { demos, demosForProject, projects, projectForDemo } from "../lib/catalog
 test("project detail pages only expose their associated experiences and legacy chat links keep their project", () => {
   assert.deepEqual(demosForProject("robot-lab").map((item) => item.slug), ["robot-assistant"]);
   assert.deepEqual(demosForProject("contoso-outdoor").map((item) => item.slug), ["contoso-outdoor"]);
-  assert.deepEqual(demosForProject("agent-studio"), demos);
+  assert.deepEqual(demosForProject("agent-studio"), []);
   assert.deepEqual(demosForProject("missing"), []);
   assert.deepEqual(demosForProject("__proto__"), []);
   for (const project of projects) {

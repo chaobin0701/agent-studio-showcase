@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { SiteShell } from "@/components/site-shell";
-import { PlatformProject } from "@/components/platform-project";
 import { ScenarioProject } from "@/components/scenario-project";
 import { projects } from "@/lib/catalog";
 
@@ -20,7 +19,7 @@ export default async function Page({
   if (!project) notFound();
   return (
     <SiteShell>
-      {project.slug === "agent-studio" ? <PlatformProject /> : <ScenarioProject project={project} />}
+      <ScenarioProject project={project} />
     </SiteShell>
   );
 }

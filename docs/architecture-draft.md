@@ -34,9 +34,8 @@
 ```text
 /                        独立品牌首页：简介、精选项目、Demo 入口
 /projects                项目列表
-/projects/[slug]         项目描述、截图、相关 Demo
-/demos                   Demo 列表
-/demos/[slug]            Demo 介绍、数据来源、体验入口
+/projects/[slug]         应用介绍、模拟资料与构建说明
+/chat                    选择聊天应用
 /chat/[demoSlug]         当前 Demo 的聊天工作区与会话列表
 /api/chat/[demoSlug]     聊天后端适配入口
 /api/tools/...           标准 HTTP Tool 接口

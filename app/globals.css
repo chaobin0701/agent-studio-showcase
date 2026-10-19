@@ -8,7 +8,7 @@
   --color-primaryho: #0063ec;
   --color-black: #181c31;
   --color-blackho: #2c3149;
-  --color-waterloo: #757693;
+  --color-waterloo: #52627a;
   --color-titlebg: #adfff8;
   --color-zumthor: #edf5ff;
   --color-stroke: #eeeeee;
@@ -32,6 +32,7 @@
   --text-sectiontitle: 13px;
   --shadow-solid-l: 0 10px 100px rgba(45, 74, 170, 0.1);
 }
+
 :root {
   color-scheme: light;
 }
@@ -115,7 +116,7 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 32px;
-  color: #6a6d80;
+  color: #45536c;
   font-size: 14px;
 }
 .site-github-link { display: inline-flex; align-items: center; gap: 7px; }
@@ -154,7 +155,7 @@ select:focus-visible {
   padding-block: 94px;
 }
 .section-kicker {
-  color: #006bff;
+  color: #005bd6;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.15em;
@@ -407,7 +408,7 @@ select:focus-visible {
 .project-card:hover { border-color:#cbdcf7; }
 .experience-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; }
 .explore-section { background:#f6f9ff; }
-#demos { scroll-margin-top:24px; }
+#demos { scroll-margin-top:76px; }
 
 /* A single visual plane introduces the platform before the application cases. */
 .studio-hero { width:100%; padding:60px 0 66px; background:linear-gradient(120deg,#fff 10%,#f4f8ff 72%,#edf4ff); overflow:hidden; }
@@ -517,4 +518,60 @@ select:focus-visible {
   .chat-topbar > div { gap:5px; }
   .demo-switcher .navigation-trigger { font-size:12px; gap:5px; }
   .demo-switcher .navigation-popover { left:0; width:285px; max-width:calc(100vw - 70px); }
+}
+
+/* A quiet, image-free introduction puts the application demos first. */
+.studio-hero-image-led { padding:46px 0 58px; background:linear-gradient(110deg,#fff 16%,#f4f8ff 100%); }
+.studio-hero-image-led .studio-hero-inner { grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr); gap:44px; }
+.studio-hero-image-led .studio-hero-copy { padding:0; }
+.studio-hero-image-led .studio-hero-copy h1 { font-size:clamp(50px,5vw,68px); }
+.studio-hero-image-led .studio-hero-copy h2 { margin-top:20px; font-size:clamp(28px,2.8vw,36px); line-height:1.35; font-weight:650; }
+.studio-hero-image-led .studio-hero-description { max-width:465px; margin-top:22px; color:#43536c; font-size:15px; line-height:1.85; }
+.studio-hero-image-led .studio-hero-actions { margin-top:29px; }
+.studio-hero-media { min-width:0; overflow:hidden; border:1px solid #dce7f7; border-radius:20px; background:#fff; box-shadow:0 22px 62px #1c4b8d17; }
+.studio-hero-media picture { display:block; }
+.studio-hero-media img { display:block; width:100%; height:auto; }
+.home-demos { padding-block:64px 78px; border-bottom:1px solid #edf0f5; }
+.chat-entry-shell { min-height:100dvh; background:#fff; }
+.chat-entry-header { min-height:78px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:0 max(24px,calc((100vw - 1180px)/2)); border-bottom:1px solid #eff2f7; }
+.chat-entry-back { display:inline-flex; align-items:center; gap:7px; color:#718097; font-size:12px; }
+.chat-entry-back:hover { color:#006bff; }
+.chat-entry-main { min-height:calc(100dvh - 78px); display:grid; place-items:center; padding:60px 24px 110px; background:radial-gradient(circle at 50% 43%,#f3f8ff 0,#fff 63%); }
+.chat-entry-welcome { text-align:center; }
+.chat-entry-mark { width:58px; height:58px; display:grid; place-items:center; margin:0 auto 28px; border-radius:17px; background:#edf4ff; color:#006bff; }
+.chat-entry-welcome .section-kicker { font-size:10px; }
+.chat-entry-welcome h1 { margin-top:15px; font-size:clamp(28px,3.5vw,42px); font-weight:650; letter-spacing:-1px; }
+.chat-entry-welcome > p:not(.section-kicker) { margin-top:13px; color:#7b879b; font-size:13px; }
+.chat-entry-welcome .primary-button { margin-top:31px; }
+.chat-entry-dialog { width:min(510px,calc(100vw - 32px)); }
+.chat-entry-dialog-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.chat-entry-dialog-heading h2 { margin-top:8px; font-size:25px; font-weight:650; letter-spacing:-.7px; }
+.chat-entry-dialog-description { margin-top:10px; color:#7b879b; font-size:12px; }
+.chat-entry-options { display:grid; gap:10px; margin-top:26px; }
+.chat-entry-option { display:flex; align-items:center; gap:15px; padding:19px 17px; border:1px solid #e3eaf4; border-radius:15px; transition:border-color .2s,background .2s,transform .2s; }
+.chat-entry-option:hover { border-color:#b9d2f7; background:#f8fbff; transform:translateY(-2px); }
+.chat-entry-option:focus-visible { outline:2px solid #006bff; outline-offset:3px; }
+.chat-entry-option-icon { flex:none; width:47px; height:47px; display:grid; place-items:center; border-radius:13px; background:#edf4ff; color:#006bff; }
+.chat-entry-option strong { display:block; font-size:15px; font-weight:600; }
+.chat-entry-option small { display:block; margin-top:7px; color:#7d899e; font-size:11px; }
+.chat-entry-option-arrow { margin-left:auto; flex:none; color:#86a1c4; }
+@media(max-width:767px) {
+  .studio-hero-image-led { padding:42px 0 50px; }
+  .studio-hero-image-led .studio-hero-inner { display:flex; flex-direction:column; gap:30px; }
+  .studio-hero-image-led .studio-hero-copy h1 { font-size:clamp(44px,11vw,60px); letter-spacing:-2.9px; }
+  .studio-hero-image-led .studio-hero-copy h2 { margin-top:15px; font-size:28px; line-height:1.4; letter-spacing:-.7px; }
+  .studio-hero-image-led .studio-hero-description { max-width:500px; margin-top:16px; font-size:14px; line-height:1.8; }
+  .studio-hero-image-led .studio-hero-actions { margin-top:23px; gap:17px; }
+  .studio-hero-media { width:min(100%,320px); margin-inline:auto; border-radius:14px; }
+  .home-demos { padding-block:54px 62px; }
+  .chat-entry-header { min-height:66px; padding-inline:18px; }
+  .chat-entry-header .brand { font-size:19px; }
+  .chat-entry-main { min-height:calc(100dvh - 66px); padding:48px 18px 90px; }
+  .chat-entry-option { padding:15px 12px; gap:12px; }
+}
+@media (min-width:768px) and (max-width:1000px) {
+  .studio-hero-image-led .studio-hero-inner { gap:26px; }
+  .studio-hero-image-led .studio-hero-copy h1 { font-size:46px; }
+  .studio-hero-image-led .studio-hero-copy h2 { font-size:26px; }
+  .studio-hero-image-led .studio-hero-description { font-size:14px; }
 }

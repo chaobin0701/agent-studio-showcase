@@ -52,7 +52,7 @@ export const products = catalog.map((p) => ({
   } as Record<string, string>,
   currency: "CNY" as const,
   categoryName: categoryNames[p.category],
-  href: `/demos/contoso-outdoor/products/${p.id}`,
+  href: "/projects/contoso-outdoor#catalog",
   manualTitle: `${localizedCatalog[p.id].name} · 使用说明书`,
 }));
 export const customers = customerData.map((customer) => ({

@@ -1,20 +1,4 @@
-import {
-  contosoSuggestionCategories,
-  contosoSuggestions,
-} from "./contoso/suggestions";
-export function categoriesForDemo(slug: string) {
-  return slug === "contoso-outdoor"
-    ? contosoSuggestionCategories
-    : suggestionCategories;
-}
-export const suggestionCategories = [
-  { key: "knowledge", name: "知识问答" },
-  { key: "report", name: "清洁报告" },
-  { key: "weather", name: "天气建议" },
-] as const;
-export type SuggestionCategory =
-  | (typeof suggestionCategories)[number]["key"]
-  | (typeof contosoSuggestionCategories)[number]["key"];
+import { contosoSuggestions } from "./contoso/suggestions";
 const knowledge = [
   "机器人无法正常回充，该怎么排查？",
   "家里有宠物，滚刷和滤网该怎么维护？",
@@ -88,18 +72,12 @@ export const robotSuggestions = knowledge.flatMap((question, index) => [
     question: weather[index],
   },
 ]);
-export function suggestionPage(
-  category: SuggestionCategory,
-  page: number,
-  demo = "robot-assistant",
-) {
+export function suggestionPage(page: number, demo = "robot-assistant") {
   const source =
     demo === "contoso-outdoor" ? contosoSuggestions : robotSuggestions;
-  const pool = source.filter((item) => item.category === category);
-  if (!pool.length) return [];
-  const offset = (Math.max(0, page) * 3) % pool.length;
-  return Array.from(
-    { length: Math.min(3, pool.length) },
-    (_, index) => pool[(offset + index) % pool.length],
-  );
+  const groupCount = Math.ceil(source.length / 3);
+  const group = Math.max(0, page) % groupCount;
+  const questions = source.slice(group * 3, group * 3 + 3);
+  // Vary the order so each topic has a turn in the first card.
+  return [...questions.slice(group % 3), ...questions.slice(0, group % 3)];
 }

@@ -7,14 +7,14 @@ Agent Studio 平台源码：[chaobin0701/agent-studio](https://github.com/chaobi
 ## 本地体验
 
 - 首页：<http://127.0.0.1:3300/>
-- 扫地机器人 Demo：<http://127.0.0.1:3300/demos/robot-assistant>
+- 扫地机器人应用介绍：<http://127.0.0.1:3300/projects/robot-lab>
 - 扫地机器人聊天：<http://127.0.0.1:3300/chat/robot-assistant>
-- 户外装备顾问：<http://127.0.0.1:3300/demos/contoso-outdoor>
+- 户外装备顾问介绍与商品目录：<http://127.0.0.1:3300/projects/contoso-outdoor>
 - 户外顾问聊天：<http://127.0.0.1:3300/chat/contoso-outdoor>
 - 数据与工具：<http://127.0.0.1:3300/tools>
 - OpenAPI：<http://127.0.0.1:3300/api/openapi>
 
-知识问答、清洁报告与天气建议属于同一个 Demo，聊天不需要切换模式。推荐问题有三个能力分类，每次展示三条，桌面为一行三列；点击“换一组”刷新当前分类的三题，选中问题填入当前输入框。
+知识问答、清洁报告与天气建议属于同一个 Demo，聊天不需要切换模式。推荐问题混合展示三种能力，每次显示三条，桌面为一行三列；点击“换一组”轮换问题，选中问题只填入当前输入框。
 
 Contoso Outdoor 是另一个独立 Demo，包含选购比较、说明书问答、模拟购买记录与搭配建议。提供 20 件样例商品、20 份中文说明书、12 位中文名称虚构客户和 32 条 2023 年购买记录；采用独立人民币模拟价格，2023 年模拟订单金额按该定价重算；英文原始资料保留。说明书由 Agent Studio 知识库检索，商品和购买记录通过只读工具查询。接入详情见 [docs/contoso-integration.md](docs/contoso-integration.md)。
 
