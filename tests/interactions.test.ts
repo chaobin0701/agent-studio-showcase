@@ -31,6 +31,7 @@ test("interaction submissions accept only one answer or a scoped decision", () =
       text: "2500 元",
     }).success,
   );
+  assert.ok(interactionResponseSchema.safeParse({ ...base, kind: "question", skip: true }).success);
   assert.ok(
     interactionResponseSchema.safeParse({
       ...base,
@@ -39,6 +40,9 @@ test("interaction submissions accept only one answer or a scoped decision", () =
     }).success,
   );
   for (const value of [
+    { ...base, kind: "question", skip: true, optionId: "one" },
+    { ...base, kind: "question", skip: true, text: "answer" },
+    { ...base, kind: "question", skip: false },
     { ...base, kind: "question", optionId: "one", text: "two" },
     { ...base, kind: "question" },
     {

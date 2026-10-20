@@ -5,7 +5,7 @@ export type ChatInteraction = {
   runId: string;
   kind: "question" | "approval";
   status:
-    "pending" | "answered" | "approved" | "rejected" | "expired" | "cancelled";
+    "pending" | "answered" | "skipped" | "approved" | "rejected" | "expired" | "cancelled";
   revision: number;
   expiresAt: string;
   question?: string;
@@ -13,9 +13,9 @@ export type ChatInteraction = {
   allowCustom?: boolean;
   toolName?: string;
   description?: string;
-  /** Redacted by Agent Studio; displayed as text, never sent back as authority. */
+  /** Redacted by Agent Studio; confirmation cards do not render these arguments. */
   arguments?: Record<string, unknown>;
-  answer?: { optionId?: string; text?: string };
+  answer?: { optionId?: string; text?: string; skipped?: true };
 };
 
 export const interactionResponseSchema = z.discriminatedUnion("kind", [
@@ -26,11 +26,12 @@ export const interactionResponseSchema = z.discriminatedUnion("kind", [
       revision: z.number().int().positive(),
       optionId: z.string().min(1).max(80).optional(),
       text: z.string().trim().min(1).max(4000).optional(),
+      skip: z.literal(true).optional(),
     })
     .strict()
     .refine(
-      (value) => Boolean(value.optionId) !== Boolean(value.text),
-      "请选择一个选项或填写回答",
+      (value) => [value.optionId, value.text, value.skip].filter(Boolean).length === 1,
+      "请选择一个选项、填写回答或跳过",
     ),
   z
     .object({

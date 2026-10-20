@@ -56,7 +56,7 @@ import {
 import { ContosoData } from "@/components/contoso-data";
 import { sseParser } from "@/lib/sse";
 import type { Thread } from "@/lib/server/store";
-import { ChatInteraction } from "@/components/chat-interaction";
+import { ChatInteraction, InteractionRecord } from "@/components/chat-interaction";
 import type { ChatInteraction as Interaction, ChatInteractionResponse } from "@/lib/interactions";
 
 type ChatMessage = {
@@ -94,16 +94,18 @@ const toolLabels: Record<string, string> = {
   contoso_list_customers: "查看模拟客户",
   contoso_get_customer: "查询模拟客户背景",
   contoso_get_orders: "读取模拟购买记录",
+  ask_user: "补充信息",
 };
-function PublicActivity({ events = [] }: { events?: PublicProgress[] }) {
+function PublicActivity({ events = [], interactions = [] }: { events?: PublicProgress[]; interactions?: Interaction[] }) {
   const tools = new Map<string, PublicProgress>();
   for (const event of events)
     if (event.stage === "tool" && event.tool) tools.set(event.tool, event);
-  if (!tools.size) return null;
+  const resolved = interactions.filter(item => item.status !== "pending");
+  if (!tools.size && !resolved.length) return null;
   return (
-    <details className="mb-2 text-[10px] text-[#9aa2af]">
+    <details key={resolved.map(item => `${item.id}:${item.status}`).join('|')} className="mb-2 w-full text-sm text-[#63718a]">
       <summary className="cursor-pointer select-none py-1">
-        查看资料与工具过程 · {tools.size} 项
+        工具调用过程 · {tools.size + resolved.length} 项
       </summary>
       <ul className="mt-2 space-y-2 border-l border-[#e3e9f3] pl-3">
         {[...tools].map(([name, event]) => (
@@ -123,6 +125,7 @@ function PublicActivity({ events = [] }: { events?: PublicProgress[] }) {
             </span>
           </li>
         ))}
+        {resolved.map(interaction => <InteractionRecord key={interaction.id} interaction={interaction} />)}
       </ul>
     </details>
   );
@@ -496,10 +499,19 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
         body: JSON.stringify({ threadId: current.id, response }), signal: controller.signal,
       });
       if (!result.ok) await readJson(result);
+      const accepted = () => { setWaiting(false); setMessages(previous => previous.map(message => ({
+        ...message,
+        interactions: message.interactions?.map(item => item.id !== response.interactionId ? item : {
+          ...item, revision: item.revision + 1,
+          status: response.kind === "approval" ? response.decision === "approve" ? "approved" : "rejected" : response.skip ? "skipped" : "answered",
+          ...(response.kind === "question" ? { answer: response.skip ? { skipped: true as const } : response.optionId ? { optionId: response.optionId, text: item.options?.find(option => option.id === response.optionId)?.label } : { text: response.text } } : {}),
+        }),
+      }))); };
       if (result.headers.get("content-type")?.includes("application/json")) {
         const replay = await readJson(result);
         if (replay.replayed !== true) throw new Error("交互答复尚未确认，请刷新状态");
-      } else await receive(result, producer.id);
+        accepted();
+      } else { accepted(); await receive(result, producer.id); }
       await loadThread(current.id);
     } catch (failure) {
       // Resolve uncertain submissions by reading state. Approval is never sent
@@ -727,7 +739,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                       className={`group flex-col gap-2 ${message.role === "user" ? "items-end" : "items-start"}`}
                     >
                       {message.role === "assistant" && (
-                        <PublicActivity events={message.progressEvents} />
+                        <PublicActivity events={message.progressEvents} interactions={message.interactions} />
                       )}
                       {(message.content || !message.interactions?.length) && <MessageContent
                         markdown={message.role === "assistant"}
@@ -740,10 +752,10 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                         {message.content ||
                           (busy ? "正在查询…" : "本轮没有完整回答。")}
                       </MessageContent>}
-                      {message.role === "assistant" && message.interactions?.map((interaction) => <ChatInteraction
+                      {message.role === "assistant" && message.interactions?.filter(interaction => interaction.status === "pending").map((interaction) => <ChatInteraction
                         key={interaction.id} interaction={interaction} disabled={busy || loading || !waiting}
                         submitting={respondingId === interaction.id} error={interactionErrors[interaction.id]}
-                        onRespond={(value) => void respond(value)} onCancel={() => void cancelQuestion(interaction.id)} />)}
+                        onRespond={(value) => void respond(value)} />)}
                       {message.incomplete && (
                         <span className="text-[10px] text-amber-700">
                           未完成 · 请刷新状态
