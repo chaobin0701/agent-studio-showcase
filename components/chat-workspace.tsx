@@ -56,6 +56,8 @@ import {
 import { ContosoData } from "@/components/contoso-data";
 import { sseParser } from "@/lib/sse";
 import type { Thread } from "@/lib/server/store";
+import { ChatInteraction } from "@/components/chat-interaction";
+import type { ChatInteraction as Interaction, ChatInteractionResponse } from "@/lib/interactions";
 
 type ChatMessage = {
   id: string;
@@ -64,6 +66,9 @@ type ChatMessage = {
   incomplete?: boolean;
   progressEvents?: PublicProgress[];
   citations?: { documentTitle?: string; originalFilename?: string }[];
+  runId?: string;
+  status?: string;
+  interactions?: Interaction[];
 };
 type PublicProgress = {
   id?: string;
@@ -146,11 +151,16 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState(false);
+  const [recoverable, setRecoverable] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
   const [connected, setConnected] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
   const [copied, setCopied] = useState("");
   const abort = useRef<AbortController | null>(null);
+  const inFlight = useRef(false);
   const inspectorRef = useRef<HTMLElement | null>(null);
   const inspectorTrigger = useRef<HTMLElement | null>(null);
   const generation = useRef(0);
@@ -209,7 +219,10 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
         })),
       );
       setPending(Boolean(data.pending));
+      setRecoverable(data.pending?.state === "unknown");
+      setWaiting(data.pending?.state === "waiting");
       if (window.innerWidth < 768) setSidebar(false);
+      return data;
     } catch (error) {
       if (generation.current === version)
         setError(error instanceof Error ? error.message : "会话加载失败");
@@ -249,6 +262,9 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     setCurrent(null);
     setMessages([]);
     setPending(false);
+    setRecoverable(false);
+    setWaiting(false);
+    setInteractionErrors({});
     setError("");
     setProgress("");
     setInput("");
@@ -271,7 +287,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     }
   }
   async function recover() {
-    if (!current || busy) return;
+    if (!current || busy || waiting) return;
     setLoading(true);
     setError("");
     try {
@@ -289,14 +305,117 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
       setLoading(false);
     }
   }
+  async function receive(response: Response, assistantId: string) {
+    if (!response.body) throw new Error("连接没有返回内容");
+    let settled = false;
+    const parser = sseParser(({ event, data }) => {
+      if (event === "progress") {
+        const entry = data as PublicProgress;
+        setProgress(
+          entry.tool
+            ? `${toolLabels[entry.tool] ?? "查询外部资料"}${entry.status === "completed" ? "完成" : "中…"}`
+            : String(data.text ?? "正在处理任务…"),
+        );
+        setMessages((previous) =>
+          previous.map((value) =>
+            value.id === assistantId
+              ? {
+                  ...value,
+                  progressEvents: [
+                    ...(value.progressEvents ?? []).filter(
+                      (old) => !entry.id || old.id !== entry.id,
+                    ),
+                    entry,
+                  ],
+                }
+              : value,
+          ),
+        );
+      }
+      if (event === "commentary_delta")
+        setProgress((previous) =>
+          previous.startsWith("正在")
+            ? String(data.text ?? "")
+            : previous + String(data.text ?? ""),
+        );
+      if (event === "commentary_completed")
+        setProgress(String(data.text ?? ""));
+      if (event === "answer_delta" || event === "answer_reset") {
+        setProgress("正在整理回答…");
+        setMessages((previous) =>
+          previous.map((value) =>
+            value.id === assistantId
+              ? {
+                  ...value,
+                  content:
+                    event === "answer_reset"
+                      ? String(data.text ?? "")
+                      : value.content + String(data.text ?? ""),
+                }
+              : value,
+          ),
+        );
+      }
+      if (event === "interaction_required" && data.interaction) {
+        settled = true;
+        const interaction = data.interaction as Interaction;
+        setPending(true);
+        setRecoverable(false);
+        setWaiting(true);
+        setProgress("");
+        setMessages((previous) => previous.map((value) => value.id === assistantId ? {
+          ...value, incomplete: false, status: "waiting", runId: String(data.runId ?? interaction.runId),
+          interactions: [...(value.interactions ?? []).filter((item) => item.id !== interaction.id), interaction],
+        } : value));
+      }
+      if (event === "done") {
+        settled = true;
+        setPending(false);
+        setRecoverable(false);
+        setWaiting(false);
+        setProgress("");
+        setMessages((previous) =>
+          previous.map((value) =>
+            value.id === assistantId
+              ? {
+                  ...value,
+                  content: String(data.answer ?? ""),
+                  incomplete: false, status: "completed",
+                  progressEvents:
+                    (data.progressEvents as PublicProgress[] | undefined) ??
+                    value.progressEvents,
+                  citations: (data.citations ??
+                    []) as ChatMessage["citations"],
+                }
+              : value,
+          ),
+        );
+      }
+      if (event === "error")
+        throw new Error(String(data.message ?? "回答未完成"));
+    });
+    const reader = response.body.getReader();
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        parser.push(part.value);
+      }
+      parser.end();
+    } finally {
+      reader.releaseLock();
+    }
+    if (!settled) throw new Error("连接已结束，结果尚未确认。请刷新会话状态。");
+  }
   async function send(text = input) {
     const message = text.trim();
-    if (message.length < 2 || busy || pending || loading || connected !== true)
+    if (message.length < 2 || inFlight.current || busy || pending || loading || connected !== true)
       return;
     if (message.length > 1600) {
       setError("消息最多 1600 个字符");
       return;
     }
+    inFlight.current = true;
     setBusy(true);
     setError("");
     setInput("");
@@ -304,7 +423,6 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     const assistantId = crypto.randomUUID();
     const controller = new AbortController();
     abort.current = controller;
-    let done = false;
     try {
       let item = current;
       if (!item) {
@@ -338,91 +456,10 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
         throw new Error(result.error ?? "暂时无法发送");
       }
       if (!response.body) throw new Error("连接没有返回内容");
-      const parser = sseParser(({ event, data }) => {
-        if (event === "progress") {
-          const entry = data as PublicProgress;
-          setProgress(
-            entry.tool
-              ? `${toolLabels[entry.tool] ?? "查询外部资料"}${entry.status === "completed" ? "完成" : "中…"}`
-              : String(data.text ?? "正在处理任务…"),
-          );
-          setMessages((previous) =>
-            previous.map((value) =>
-              value.id === assistantId
-                ? {
-                    ...value,
-                    progressEvents: [
-                      ...(value.progressEvents ?? []).filter(
-                        (old) => !entry.id || old.id !== entry.id,
-                      ),
-                      entry,
-                    ],
-                  }
-                : value,
-            ),
-          );
-        }
-        if (event === "commentary_delta")
-          setProgress((previous) =>
-            previous.startsWith("正在")
-              ? String(data.text ?? "")
-              : previous + String(data.text ?? ""),
-          );
-        if (event === "commentary_completed")
-          setProgress(String(data.text ?? ""));
-        if (event === "answer_delta" || event === "answer_reset") {
-          setProgress("正在整理回答…");
-          setMessages((previous) =>
-            previous.map((value) =>
-              value.id === assistantId
-                ? {
-                    ...value,
-                    content:
-                      event === "answer_reset"
-                        ? String(data.text ?? "")
-                        : value.content + String(data.text ?? ""),
-                  }
-                : value,
-            ),
-          );
-        }
-        if (event === "done") {
-          done = true;
-          setPending(false);
-          setProgress("");
-          setMessages((previous) =>
-            previous.map((value) =>
-              value.id === assistantId
-                ? {
-                    ...value,
-                    content: String(data.answer ?? ""),
-                    progressEvents:
-                      (data.progressEvents as PublicProgress[] | undefined) ??
-                      value.progressEvents,
-                    citations: (data.citations ??
-                      []) as ChatMessage["citations"],
-                  }
-                : value,
-            ),
-          );
-        }
-        if (event === "error")
-          throw new Error(String(data.message ?? "回答未完成"));
-      });
-      const reader = response.body.getReader();
-      try {
-        while (true) {
-          const part = await reader.read();
-          if (part.done) break;
-          parser.push(part.value);
-        }
-        parser.end();
-      } finally {
-        reader.releaseLock();
-      }
-      if (!done) throw new Error("连接已结束，结果尚未确认。请刷新会话状态。");
+      await receive(response, assistantId);
     } catch (error) {
       setPending(true);
+      setRecoverable(true);
       setMessages((previous) =>
         previous.map((value) =>
           value.id === assistantId ? { ...value, incomplete: true } : value,
@@ -436,8 +473,74 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
             : "连接中断，请刷新状态。",
       );
     } finally {
+      inFlight.current = false;
       setBusy(false);
       setProgress("");
+      abort.current = null;
+      void refreshList().catch(() => {});
+    }
+  }
+  async function respond(response: ChatInteractionResponse) {
+    if (!current || inFlight.current || busy || loading || !waiting) return;
+    const producer = messages.find((message) => message.interactions?.some((i) => i.id === response.interactionId && i.status === "pending"));
+    if (!producer) return;
+    inFlight.current = true;
+    setBusy(true);
+    setRespondingId(response.interactionId);
+    setInteractionErrors((previous) => ({ ...previous, [response.interactionId]: "" }));
+    const controller = new AbortController();
+    abort.current = controller;
+    try {
+      const result = await fetch(`/api/chat/${demo.slug}/interactions/${response.interactionId}`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ threadId: current.id, response }), signal: controller.signal,
+      });
+      if (!result.ok) await readJson(result);
+      if (result.headers.get("content-type")?.includes("application/json")) {
+        const replay = await readJson(result);
+        if (replay.replayed !== true) throw new Error("交互答复尚未确认，请刷新状态");
+      } else await receive(result, producer.id);
+      await loadThread(current.id);
+    } catch (failure) {
+      // Resolve uncertain submissions by reading state. Approval is never sent
+      // again automatically or transformed into a normal chat message.
+      const fresh = await loadThread(current.id);
+      const stillPending = !fresh || fresh.messages.some((message: ChatMessage) => message.interactions?.some((item) => item.id === response.interactionId && item.status === "pending"));
+      if (stillPending) setInteractionErrors((previous) => ({ ...previous,
+        [response.interactionId]: `${failure instanceof Error ? failure.message : "提交未完成"}；请刷新状态，确认仍待处理后再提交同一答复。`,
+      }));
+      else if (fresh?.messages.some((message: ChatMessage) => message.status === "failed" && message.interactions?.some((item) => item.id === response.interactionId)))
+        setError(failure instanceof Error ? failure.message : "本轮执行未完成，请刷新状态。");
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+      setRespondingId(null);
+      setProgress("");
+      abort.current = null;
+      void refreshList().catch(() => {});
+    }
+  }
+  async function cancelQuestion(interactionId: string) {
+    if (!current || inFlight.current || busy || loading || !waiting) return;
+    inFlight.current = true;
+    setRespondingId(interactionId);
+    setBusy(true);
+    setInteractionErrors((previous) => ({ ...previous, [interactionId]: "" }));
+    const controller = new AbortController();
+    abort.current = controller;
+    try {
+      await readJson(await fetch(`/api/chat/${demo.slug}/interactions/${interactionId}/cancel`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ threadId: current.id }), signal: controller.signal,
+      }));
+      await loadThread(current.id);
+    } catch (failure) {
+      const fresh = await loadThread(current.id);
+      if (!fresh || fresh.messages.some((message: ChatMessage) => message.interactions?.some((item) => item.id === interactionId && item.status === "pending")))
+        setInteractionErrors((previous) => ({ ...previous, [interactionId]: `${failure instanceof Error ? failure.message : "取消未确认"}；请刷新状态。` }));
+    } finally {
+      inFlight.current = false;
+      setRespondingId(null);
+      setBusy(false);
       abort.current = null;
       void refreshList().catch(() => {});
     }
@@ -626,7 +729,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                       {message.role === "assistant" && (
                         <PublicActivity events={message.progressEvents} />
                       )}
-                      <MessageContent
+                      {(message.content || !message.interactions?.length) && <MessageContent
                         markdown={message.role === "assistant"}
                         className={
                           message.role === "user"
@@ -636,7 +739,11 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                       >
                         {message.content ||
                           (busy ? "正在查询…" : "本轮没有完整回答。")}
-                      </MessageContent>
+                      </MessageContent>}
+                      {message.role === "assistant" && message.interactions?.map((interaction) => <ChatInteraction
+                        key={interaction.id} interaction={interaction} disabled={busy || loading || !waiting}
+                        submitting={respondingId === interaction.id} error={interactionErrors[interaction.id]}
+                        onRespond={(value) => void respond(value)} onCancel={() => void cancelQuestion(interaction.id)} />)}
                       {message.incomplete && (
                         <span className="text-[10px] text-amber-700">
                           未完成 · 请刷新状态
@@ -752,7 +859,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                 )}
               </div>
             )}
-            {pending && !busy && (
+            {pending && recoverable && !waiting && !busy && (
               <button
                 className="mb-3 mr-4 inline-flex items-center gap-2 text-xs text-primary"
                 disabled={loading}
@@ -762,7 +869,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                 恢复原请求
               </button>
             )}
-            {pending && !error && (
+            {pending && !error && !waiting && (
               <button
                 className="mb-3 flex items-center gap-2 text-xs text-[#959dab]"
                 onClick={() => current && void loadThread(current.id)}
@@ -771,6 +878,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                 执行结果尚未确认，点击刷新状态
               </button>
             )}
+            {waiting && !busy && <p role="status" className="mb-3 px-2 text-sm leading-6 text-[#52627c]">正在等待你的回应，请在对话卡片中选择或填写。</p>}
             <PromptInput
               value={input}
               onValueChange={setInput}
@@ -801,7 +909,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                   <ChevronDown size={11} className="shrink-0" aria-hidden="true" />
                 </button>
                 <PromptInputAction
-                  tooltip={busy ? "停止接收（助手可能仍在执行）" : "发送消息"}
+                  tooltip={busy ? "停止接收（助手可能仍在执行）" : waiting ? "请先回应对话卡片" : "发送消息"}
                 >
                   <button
                     aria-label={busy ? "停止接收" : "发送消息"}
