@@ -70,7 +70,7 @@ export function createThread(
 export function pending(id: string) {
   return db()
     .prepare(
-      "SELECT * FROM requests WHERE thread_id=? AND state IN ('running','unknown') ORDER BY rowid DESC LIMIT 1",
+      "SELECT * FROM requests WHERE thread_id=? AND state IN ('running','waiting','unknown') ORDER BY rowid DESC LIMIT 1",
     )
     .get(id) as Pending | undefined;
 }

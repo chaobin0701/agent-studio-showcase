@@ -12,6 +12,34 @@ import { sseParser } from "../sse";
 import { profileForDemo } from "../demo-profiles";
 import { canonicalDemoSlug } from "../catalog";
 import { demoConnection } from "./connections";
+import {
+  interactionResponseSchema,
+  type ChatInteraction,
+  type ChatInteractionResponse,
+} from "../interactions";
+
+type UpstreamRun = {
+  id: string;
+  integrationCallId?: string;
+  assistantMessageId?: number | null;
+  clientRequestId: string;
+  question?: string;
+  status: string;
+  errorCode?: string;
+  createdAt?: string;
+  interactions?: ChatInteraction[];
+};
+async function runsForThread(thread: Thread): Promise<UpstreamRun[]> {
+  if (!thread.upstream_id) return [];
+  const query = new URLSearchParams({ userId: platformUser(thread) });
+  return (
+    await agentRequest(
+      `/v1/agent/conversations/${thread.upstream_id}/runs?${query}`,
+      {},
+      thread.demo,
+    )
+  ).json();
+}
 
 export function connected(demo = "robot-assistant") {
   const connection = demoConnection(demo);
@@ -58,22 +86,17 @@ export async function history(thread: Thread) {
   const active = pending(thread.id);
   if (!thread.upstream_id) return { messages: [], pending: active ?? null };
   const query = new URLSearchParams({ userId: platformUser(thread) });
+  const runs = await runsForThread(thread);
   if (active) {
-    const runs = await (
-      await agentRequest(
-        `/v1/agent/conversations/${thread.upstream_id}/runs?${query}`,
-        {},
-        thread.demo,
-      )
-    ).json();
-    const run = runs.find(
-      (item: { clientRequestId: string }) =>
-        item.clientRequestId === active.request_id,
-    );
+    const run = runs.find((item) => item.clientRequestId === active.request_id);
     if (run && run.status !== "running")
       finishRequest(
         active.request_id,
-        run.status === "completed" ? "completed" : "failed",
+        run.status === "waiting"
+          ? "waiting"
+          : run.status === "completed"
+            ? "completed"
+            : "failed",
         run.errorCode ?? null,
       );
   }
@@ -84,11 +107,54 @@ export async function history(thread: Thread) {
       thread.demo,
     )
   ).json();
+  for (const run of runs) {
+    if (!run.interactions?.length) continue;
+    const assistant =
+      run.assistantMessageId == null
+        ? undefined
+        : messages.find(
+            (message: { id: string | number; role: string }) =>
+              message.role === "assistant" &&
+              String(message.id) === String(run.assistantMessageId),
+          );
+    if (assistant) {
+      assistant.interactions = run.interactions;
+      assistant.runId = run.integrationCallId;
+      assistant.status = run.status;
+    } else {
+      // A waiting legacy run has not saved its ordinary user/assistant pair yet.
+      const delivery = savedRequest(run.clientRequestId);
+      if (delivery?.thread_id !== thread.id) continue;
+      messages.push({
+        id: `interaction-user:${run.id}`,
+        role: "user",
+        content: run.question ?? JSON.parse(delivery.body).message,
+        createdAt: run.createdAt,
+      });
+      messages.push({
+        id: `interaction-run:${run.id}`,
+        role: "assistant",
+        content: "",
+        runId: run.integrationCallId,
+        status: run.status,
+        interactions: run.interactions,
+        createdAt: run.createdAt,
+      });
+    }
+  }
+  messages.sort((a: { createdAt?: string }, b: { createdAt?: string }) =>
+    a.createdAt && b.createdAt
+      ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      : 0,
+  );
   return { messages, pending: pending(thread.id) ?? null };
 }
 export async function recoverRequest(thread: Thread) {
+  if (thread.upstream_id) await history(thread);
   const active = pending(thread.id);
   if (!active) return { recovered: false };
+  if (active.state === "waiting")
+    throw new HttpError(409, "请回应对话中的卡片，无需恢复原请求");
   // Explicit user action only. Preserve the original body and idempotency key,
   // including the absent conversationId on an unconfirmed first turn.
   const response = await agentRequest(
@@ -103,7 +169,10 @@ export async function recoverRequest(thread: Thread) {
   const result = await response.json();
   if (typeof result.conversationId === "string")
     setUpstream(thread.id, result.conversationId);
-  finishRequest(active.request_id, "completed");
+  finishRequest(
+    active.request_id,
+    result.status === "waiting" || result.interaction ? "waiting" : "completed",
+  );
   return { recovered: true };
 }
 export async function sendMessage(
@@ -135,7 +204,7 @@ export async function sendMessage(
       stream: true,
     });
   const old = beginRequest(thread.id, requestId, body);
-  if (old?.state === "running")
+  if (old?.state === "running" || old?.state === "waiting")
     throw new HttpError(409, "消息正在执行，请刷新状态");
   let response: Response;
   try {
@@ -162,6 +231,116 @@ export async function sendMessage(
     throw new HttpError(502, "聊天服务没有返回事件流");
   }
   setTitle(thread.id, message);
+  return relayAgentStream(response, thread, requestId);
+}
+
+export async function respondToInteraction(
+  thread: Thread,
+  value: ChatInteractionResponse,
+) {
+  const parsed = interactionResponseSchema.safeParse(value);
+  if (!parsed.success) throw new HttpError(400, "交互答复格式错误");
+  const runs = await runsForThread(thread);
+  const run = runs.find((item) =>
+    item.interactions?.some((i) => i.id === parsed.data.interactionId),
+  );
+  const interaction = run?.interactions?.find(
+    (i) => i.id === parsed.data.interactionId,
+  );
+  const delivery = run && savedRequest(run.clientRequestId);
+  if (
+    !run ||
+    !interaction ||
+    !thread.upstream_id ||
+    !delivery ||
+    delivery.thread_id !== thread.id
+  )
+    throw new HttpError(404, "交互请求不存在");
+  if (
+    interaction.kind !== parsed.data.kind ||
+    (interaction.status === "pending" &&
+      interaction.revision !== parsed.data.revision)
+  )
+    throw new HttpError(409, "交互请求已变化，请刷新会话");
+  // Resolution increments the server revision. Completed responses must reach
+  // the upstream fingerprint check with their original revision for replay.
+  const query = new URLSearchParams({ userId: platformUser(thread) });
+  let response: Response;
+  try {
+    response = await agentRequest(
+      `/v1/agent/conversations/${thread.upstream_id}/interactions/${interaction.id}/respond?${query}`,
+      { method: "POST", body: JSON.stringify(parsed.data) },
+      thread.demo,
+    );
+  } catch (error) {
+    if (!(error instanceof HttpError) || error.status >= 500)
+      finishRequest(delivery.request_id, "unknown");
+    throw error;
+  }
+  finishRequest(delivery.request_id, "running");
+  if (response.headers.get("content-type")?.includes("application/json")) {
+    const replay = await response.json();
+    if (replay.replayed !== true) {
+      finishRequest(delivery.request_id, "unknown");
+      throw new HttpError(502, "交互服务返回了未识别的确认结果");
+    }
+    // A duplicate response can acknowledge a still-running original resume.
+    // Reconcile its durable status; a JSON acknowledgement is never `done`.
+    await history(thread).catch(() => {});
+    return Response.json(
+      { replayed: true, runId: replay.runId },
+      { status: 202 },
+    );
+  }
+  return relayAgentStream(response, thread, delivery.request_id);
+}
+
+export async function cancelInteraction(thread: Thread, interactionId: string) {
+  const runs = await runsForThread(thread);
+  const run = runs.find((item) =>
+    item.interactions?.some((interaction) => interaction.id === interactionId),
+  );
+  const interaction = run?.interactions?.find(
+    (item) => item.id === interactionId,
+  );
+  const delivery = run && savedRequest(run.clientRequestId);
+  if (
+    !run ||
+    !interaction ||
+    interaction.kind !== "question" ||
+    !thread.upstream_id ||
+    !delivery ||
+    delivery.thread_id !== thread.id
+  )
+    throw new HttpError(404, "交互请求不存在");
+  const query = new URLSearchParams({ userId: platformUser(thread) });
+  try {
+    await agentRequest(
+      `/v1/agent/conversations/${thread.upstream_id}/interactions/${interaction.id}/cancel?${query}`,
+      { method: "POST" },
+      thread.demo,
+    );
+  } catch (error) {
+    if (!(error instanceof HttpError) || error.status >= 500)
+      finishRequest(delivery.request_id, "unknown");
+    throw error;
+  }
+  finishRequest(delivery.request_id, "failed", "interaction_cancelled");
+  return { cancelled: true };
+}
+
+function relayAgentStream(
+  response: Response,
+  thread: Thread,
+  requestId: string,
+) {
+  if (
+    !response.body ||
+    !response.headers.get("content-type")?.includes("text/event-stream")
+  ) {
+    finishRequest(requestId, "unknown");
+    throw new HttpError(502, "聊天服务没有返回事件流");
+  }
   let disconnected = false;
   let terminal = false;
   const encoder = new TextEncoder();
@@ -189,6 +368,10 @@ export async function sendMessage(
               event === "done" ? "completed" : "failed",
               event === "error" ? String(data.message ?? "执行失败") : null,
             );
+          }
+          if (event === "interaction_required") {
+            terminal = true; // Waiting is a settled delivery, not a completed task.
+            finishRequest(requestId, "waiting");
           }
         });
         const reader = response.body!.getReader();
