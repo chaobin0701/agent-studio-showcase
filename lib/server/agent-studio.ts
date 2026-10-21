@@ -45,6 +45,17 @@ export function connected(demo = "robot-assistant") {
   const connection = demoConnection(demo);
   return Boolean(connection.agentId && connection.apiKey);
 }
+export async function chatStatus(demo = "robot-assistant") {
+  if (!connected(demo)) return { connected: false, quota: null };
+  try {
+    const response = await agentRequest("/v1/agent/chat-status", {}, demo);
+    const result = await response.json();
+    return { connected: true, quota: result.quota ?? null };
+  } catch {
+    // Optional quota visibility must not mark an otherwise configured chat as disconnected.
+    return { connected: true, quota: null };
+  }
+}
 export function platformUser(thread: Thread) {
   // Keep the original Demo identity of legacy conversations. Canonicalizing
   // this field would change upstream ownership and orphan existing history.

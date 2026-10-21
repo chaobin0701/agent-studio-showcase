@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { suggestionPage } from "../lib/suggestions";
+import { suggestedFollowUps, suggestionPage } from "../lib/suggestions";
 import { demos, findDemo } from "../lib/catalog";
 test("one robot Demo exposes its three features and resolves old entry links", () => {
   assert.equal(demos.filter((d) => d.slug.startsWith("robot")).length, 1);
@@ -23,4 +23,17 @@ test("recommendations mix all three topics and refresh through the full question
     assert.notDeepEqual(cycle[0].map((q) => q.id), cycle[1].map((q) => q.id));
   }
   assert.ok(suggestionPage(0, "contoso-outdoor").every((q) => !/机器人|拖布|天气/.test(q.question)));
+});
+
+test("structured follow-ups read only the explicit field and filter invalid entries", () => {
+  assert.deepEqual(
+    suggestedFollowUps({
+      suggestedFollowUps: ["  对比两款帐篷？ ", "对比两款帐篷？", "", 3, "如何保养？", "预算还需要补充什么？", "第四条"],
+      anotherField: ["不能从这里猜测"],
+    }),
+    ["对比两款帐篷？", "如何保养？", "预算还需要补充什么？"],
+  );
+  assert.deepEqual(suggestedFollowUps({ questions: ["不会读取这里"] }), []);
+  assert.deepEqual(suggestedFollowUps(["不是对象"]), []);
+  assert.deepEqual(suggestedFollowUps({ suggestedFollowUps: ["超长".repeat(61)] }), []);
 });
