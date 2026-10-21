@@ -46,7 +46,7 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
       response.writeHead(200, { "content-type": "application/json" });
       response.end(
         JSON.stringify([
-          { id: "legacy-answer", role: "assistant", content: "旧会话内容" },
+          { id: "legacy-answer", role: "assistant", content: "旧会话内容", structured: { suggestedFollowUps: ["继续了解中文示例"] } },
         ]),
       );
       return;
@@ -71,7 +71,7 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
     response.write('event: answer_delta\ndata: {"text":"模拟"}\n\n');
     const complete = () =>
       response.end(
-        `event: done\ndata: ${JSON.stringify({ conversationId, answer: "模拟回答" })}\n\n`,
+        `event: done\ndata: ${JSON.stringify({ conversationId, answer: "模拟回答", structured: { suggestedFollowUps: ["继续了解中文示例"] } })}\n\n`,
       );
     if (body.includes("停止接收测试"))
       setTimeout(() => {
@@ -101,7 +101,9 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
   assert.notEqual(platformUser(first), platformUser(other));
   const requestId = randomUUID();
   const response = await sendMessage(first, "请生成清洁报告", requestId);
-  assert.match(await response.text(), /模拟回答/);
+  const live = await response.text();
+  assert.match(live, /模拟回答/);
+  assert.match(live, /suggestedFollowUps/);
   const restored = thread("visitor-a", first.id);
   assert.equal(restored.upstream_id, conversationId);
   assert.equal(pending(first.id), undefined);
@@ -129,6 +131,7 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
     thread("visitor-a", first.id, "robot-assistant"),
   );
   assert.equal(oldHistory.messages[0].content, "旧会话内容");
+  assert.deepEqual(oldHistory.messages[0].structured, { suggestedFollowUps: ["继续了解中文示例"] });
   assert.equal(historyUsers[0], "hub:visitor-a:robot-report:1003");
   const stopped = createThread("visitor-a", "robot-weather", "1001", "2025-12");
   const stoppedId = randomUUID();

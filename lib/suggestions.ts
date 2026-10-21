@@ -81,3 +81,21 @@ export function suggestionPage(page: number, demo = "robot-assistant") {
   // Vary the order so each topic has a turn in the first card.
   return [...questions.slice(group % 3), ...questions.slice(0, group % 3)];
 }
+
+/** Read only the declared structured-output extension; never infer questions from arbitrary JSON. */
+export function suggestedFollowUps(value: unknown): string[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const candidates = (value as Record<string, unknown>).suggestedFollowUps;
+  if (!Array.isArray(candidates)) return [];
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const question = candidate.trim();
+    if (!question || question.length > 120 || seen.has(question)) continue;
+    seen.add(question);
+    result.push(question);
+    if (result.length === 3) break;
+  }
+  return result;
+}

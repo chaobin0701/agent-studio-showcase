@@ -1,7 +1,7 @@
 "use client";
 
 // Zola's prompt-kit conversation, composer and message components, with a custom Agent Studio transport.
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -22,7 +22,6 @@ import {
   RefreshCw,
   Square,
   Trash2,
-  UserRound,
   X,
 } from "lucide-react";
 import {
@@ -54,6 +53,7 @@ import {
   periodsForDemo,
 } from "@/lib/demo-profiles";
 import { ContosoData } from "@/components/contoso-data";
+import { suggestedFollowUps } from "@/lib/suggestions";
 import { sseParser } from "@/lib/sse";
 import type { Thread } from "@/lib/server/store";
 import { ChatInteraction, InteractionRecord } from "@/components/chat-interaction";
@@ -68,7 +68,30 @@ type ChatMessage = {
   citations?: { documentTitle?: string; originalFilename?: string }[];
   runId?: string;
   status?: string;
+  refused?: boolean;
+  structured?: unknown;
   interactions?: Interaction[];
+  contextUsage?: {
+    model: string;
+    contextWindowTokens: number;
+    inputBudgetTokens: number;
+    estimatedInputTokens: number;
+    remainingInputTokens: number;
+    usagePercent: number;
+    measurementSource: "heuristic" | "provider";
+    maxOutputTokens: number;
+    safetyBufferTokens: number;
+    measuredAt: string;
+    includesDraft: false;
+  };
+};
+type ChatQuota = {
+  scope: "application-shared";
+  resetAt: string;
+  timezone: string;
+  checkedAt: string;
+  requests?: { limit: number; used: number; remaining: number };
+  tokens?: { limit: number; used: number; reserved: number; remaining: number; unsettled: boolean };
 };
 type PublicProgress = {
   id?: string;
@@ -143,7 +166,7 @@ function publicText(value: string) {
 export function ChatWorkspace({ demo }: { demo: Demo }) {
   const [sidebar, setSidebar] = useState(false);
   const [inspector, setInspector] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [contextInfoOpen, setContextInfoOpen] = useState(false);
   const [threadList, setThreadList] = useState<Thread[]>([]);
   const [current, setCurrent] = useState<Thread | null>(null);
   const [persona, setPersona] = useState(profilesForDemo(demo.slug)[0].id);
@@ -159,6 +182,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
   const [connected, setConnected] = useState<boolean | null>(null);
+  const [quota, setQuota] = useState<ChatQuota | null>(null);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
   const [copied, setCopied] = useState("");
@@ -166,10 +190,28 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   const inFlight = useRef(false);
   const inspectorRef = useRef<HTMLElement | null>(null);
   const inspectorTrigger = useRef<HTMLElement | null>(null);
+  const contextMeterRef = useRef<HTMLDivElement | null>(null);
   const generation = useRef(0);
   const profile = profileForDemo(demo.slug, persona)!;
   const isContoso = demo.slug === "contoso-outdoor";
   const contextLabel = isContoso ? "2023 年样例" : `${month} 示例`;
+  const lastMessage = messages.at(-1);
+  const lastAssistant = lastMessage?.role === "assistant" ? lastMessage : undefined;
+  const completedAssistant = lastAssistant?.status === "completed" && !lastAssistant.incomplete && !lastAssistant.refused
+    ? lastAssistant
+    : undefined;
+  // Keep the last completed measurement visible while the next reply streams.
+  // Derive it from this thread so switching roles or conversations cannot leak it.
+  const contextUsage = messages.findLast(message =>
+    message.role === "assistant" && message.status === "completed" && !message.incomplete && message.contextUsage
+  )?.contextUsage;
+  const contextPercent = contextUsage ? Math.round(contextUsage.usagePercent) : undefined;
+  const followUps = completedAssistant ? suggestedFollowUps(completedAssistant.structured) : [];
+  const outgoingText = input.trim() || followUps[0] || "";
+  function formatTokens(value: number) { return new Intl.NumberFormat("zh-CN").format(value); }
+  function resetTime(value: ChatQuota) {
+    return new Intl.DateTimeFormat("zh-CN", { timeZone: value.timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value.resetAt));
+  }
   function showProfile(event: MouseEvent<HTMLButtonElement>) {
     inspectorTrigger.current = event.currentTarget;
     if (window.innerWidth < 768) setSidebar(false);
@@ -187,6 +229,21 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     inspectorRef.current?.focus();
   }, [inspector]);
   useEffect(() => {
+    if (!contextInfoOpen) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (!contextMeterRef.current?.contains(event.target as Node)) setContextInfoOpen(false);
+    };
+    const dismissOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setContextInfoOpen(false);
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [contextInfoOpen]);
+  useEffect(() => {
     try { setInput(sessionStorage.getItem(`showcase:draft:${demo.slug}`) ?? ""); }
     catch { /* A blocked session store should not prevent chatting. */ }
     setDraftLoaded(true);
@@ -203,6 +260,11 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     setThreadList(data.threads);
     return data.threads as Thread[];
   }
+  async function refreshStatus() {
+    const data = await readJson(await fetch(`/api/hub/status?demo=${demo.slug}`, { cache: "no-store" }));
+    setConnected(data.connected);
+    setQuota(data.quota ?? null);
+  }
   async function loadThread(id: string) {
     const version = ++generation.current;
     setLoading(true);
@@ -212,15 +274,15 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
         await fetch(`/api/hub/threads/${id}`, { cache: "no-store" }),
       );
       if (generation.current !== version) return;
+      const restoredMessages = data.messages.map((message: ChatMessage) => ({
+        ...message,
+        content: publicText(message.content),
+        ...(message.role === "assistant" && !message.status ? { status: "completed" } : {}),
+      }));
       setCurrent(data.thread);
       setPersona(data.thread.persona);
       setMonth(data.thread.month);
-      setMessages(
-        data.messages.map((message: ChatMessage) => ({
-          ...message,
-          content: publicText(message.content),
-        })),
-      );
+      setMessages(restoredMessages);
       setPending(Boolean(data.pending));
       setRecoverable(data.pending?.state === "unknown");
       setWaiting(data.pending?.state === "waiting");
@@ -236,14 +298,10 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   useEffect(() => {
     setSidebar(window.innerWidth >= 768);
     let disposed = false;
-    fetch(`/api/hub/status?demo=${demo.slug}`)
-      .then(readJson)
-      .then((data) => {
-        if (!disposed) setConnected(data.connected);
-      })
-      .catch(() => {
-        if (!disposed) setConnected(false);
-      });
+    refreshStatus().catch(() => { if (!disposed) { setConnected(false); setQuota(null); } });
+    const onFocus = () => { if (document.visibilityState === "visible") void refreshStatus().catch(() => {}); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
     refreshList()
       .then((items) => {
         if (!disposed && items.length) void loadThread(items[0].id);
@@ -253,6 +311,8 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
       });
     return () => {
       disposed = true;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       generation.current++;
       abort.current?.abort();
     };
@@ -274,6 +334,16 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     setPersona(nextPersona);
     setMonth(nextMonth);
     if (window.innerWidth < 768) setSidebar(false);
+  }
+  function addFollowUp(question: string) {
+    const base = input.trimEnd();
+    const next = base ? `${base}\n${question}` : question;
+    if (next.length > 1600) {
+      setError("草稿已接近长度上限，请先删减部分内容再添加追问。");
+      return;
+    }
+    setError("");
+    setInput(next);
   }
   async function remove(item: Thread) {
     if (!window.confirm("删除这段对话？此操作会同时删除对应的聊天历史。"))
@@ -389,10 +459,14 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                     value.progressEvents,
                   citations: (data.citations ??
                     []) as ChatMessage["citations"],
+                  contextUsage: data.contextUsage as ChatMessage["contextUsage"],
+                  structured: data.structured,
+                  refused: data.refused === true,
                 }
               : value,
           ),
         );
+        void refreshStatus().catch(() => {});
       }
       if (event === "error")
         throw new Error(String(data.message ?? "回答未完成"));
@@ -410,8 +484,8 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     }
     if (!settled) throw new Error("连接已结束，结果尚未确认。请刷新会话状态。");
   }
-  async function send(text = input) {
-    const message = text.trim();
+  async function send(text?: string) {
+    const message = (text ?? (input.trim() ? input : followUps[0] ?? "")).trim();
     if (message.length < 2 || inFlight.current || busy || pending || loading || connected !== true)
       return;
     if (message.length > 1600) {
@@ -822,27 +896,23 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
             </div>
           )}
           <div className="chat-composer">
-            {messages.length > 0 && (
-              <div className="mb-3">
-                <button
-                  type="button"
-                  className="rounded-full bg-[#f4f7fb] px-3 py-1.5 text-[10px] text-[#8794a6] hover:text-primary"
-                  aria-expanded={showSuggestions}
-                  onClick={() => setShowSuggestions((value) => !value)}
-                >
-                  {showSuggestions ? "收起推荐问题" : "推荐问题"}
-                </button>
-                {showSuggestions && (
-                  <div className="mt-3 max-h-[300px] overflow-y-auto rounded-xl border border-[#edf0f5] p-3">
-                    <SuggestedQuestions
-                      key={demo.slug}
-                      demo={demo.slug}
+            {followUps.length > 0 && (
+              <section className="assistant-panel" aria-label="你可能还想问">
+                <h2 className="assistant-followups-heading">你可能还想问</h2>
+                <div className="assistant-followups">
+                  {followUps.map((question) => (
+                    <button
+                      key={question}
+                      type="button"
                       disabled={busy || loading || pending}
-                      onSelect={setInput}
-                    />
-                  </div>
-                )}
-              </div>
+                      className="assistant-followup"
+                      onClick={() => addFollowUp(question)}
+                    >
+                      <span>{question}</span><ArrowUpRight size={14} aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
             {progress && (
               <p
@@ -900,35 +970,83 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
             >
               <PromptInputTextarea
                 aria-label="输入消息"
+                onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
+                  if (
+                    event.key === "Tab" &&
+                    !event.shiftKey &&
+                    !event.ctrlKey && !event.altKey && !event.metaKey && !event.repeat &&
+                    !input.trim() &&
+                    followUps.length > 0 &&
+                    !event.nativeEvent.isComposing &&
+                    event.keyCode !== 229
+                  ) {
+                    event.preventDefault();
+                    setInput(followUps[0]);
+                  }
+                }}
                 placeholder={
                   connected === false
                     ? "聊天服务尚未连接"
-                    : "问一个问题，或者让助手帮你看看…"
+                    : !input.trim() && followUps.length > 0
+                      ? followUps[0]
+                      : "问一个问题，或者让助手帮你看看…"
                 }
                 maxLength={1600}
                 disabled={busy || pending || loading || connected !== true}
                 className="px-2 text-[13px]"
               />
               <PromptInputActions className="mt-1 justify-between">
-                <button
-                  type="button"
-                  className="chat-profile-trigger flex min-h-8 min-w-0 items-center gap-2 rounded-full px-2 py-1 text-[10px] text-[#8b93a1]"
-                  aria-label={`查看或切换角色：${profile.name}`} aria-controls="chat-profile-panel" aria-expanded={inspector}
-                  onClick={showProfile}
-                >
-                  <UserRound size={13} className="shrink-0" />
-                  <span className="truncate">{profile.name} · {contextLabel}</span>
-                  <ChevronDown size={11} className="shrink-0" aria-hidden="true" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <div
+                    ref={contextMeterRef}
+                    className={`context-meter-wrap${contextInfoOpen ? " is-open" : ""}`}
+                    onClick={(event) => event.stopPropagation()}
+                    onPointerEnter={(event) => { if (event.pointerType === "mouse") setContextInfoOpen(true); }}
+                    onPointerLeave={(event) => {
+                      if (event.pointerType === "mouse" && !event.currentTarget.contains(document.activeElement)) setContextInfoOpen(false);
+                    }}
+                    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setContextInfoOpen(false); }}
+                  >
+                    <button
+                      type="button"
+                      className="context-meter"
+                      style={{ "--context-value": `${Math.max(0, Math.min(100, contextUsage?.usagePercent ?? 0))}%` } as CSSProperties}
+                      aria-label={contextUsage ? `上下文占用 ${contextPercent}%，查看详情` : "上下文占用未知，查看详情"}
+                      aria-expanded={contextInfoOpen}
+                      aria-controls="chat-context-details"
+                      aria-describedby={contextInfoOpen ? "chat-context-details" : undefined}
+                      onFocus={() => setContextInfoOpen(true)}
+                      onClick={() => setContextInfoOpen(true)}
+                    >
+                      <span>{contextUsage ? `${contextPercent}%` : "—"}</span>
+                    </button>
+                    <div id="chat-context-details" className="context-meter-popover" role="tooltip" aria-hidden={!contextInfoOpen}>
+                      <strong>上下文容量</strong>
+                      {(busy || pending) && contextUsage && <span>显示上次已完成调用的数据，本次回复完成后更新。</span>}
+                      {contextUsage ? (
+                        <span>模型窗口 {formatTokens(contextUsage.contextWindowTokens)} Token · 剩余 {formatTokens(contextUsage.remainingInputTokens)} Token</span>
+                      ) : <span>尚无本次调用测量，占用比例未知。</span>}
+                      {(quota?.requests || quota?.tokens) && (
+                        <>
+                          <strong>应用共享额度</strong>
+                          <span>{quota.requests ? `今日剩余 ${formatTokens(quota.requests.remaining)} 次` : `今日剩余 ${formatTokens(quota.tokens!.remaining)} Token`}</span>
+                          <span>重置于 {resetTime(quota)}（{quota.timezone}）</span>
+                          {quota.tokens?.unsettled && <span>部分调用尚未结算，预留消耗已计入剩余量。</span>}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {quota?.requests && <span className="context-quota-label">今日剩余 {formatTokens(quota.requests.remaining)} 次</span>}
+                </div>
                 <PromptInputAction
-                  tooltip={busy ? "停止接收（助手可能仍在执行）" : waiting ? "请先回应对话卡片" : "发送消息"}
+                  tooltip={busy ? "停止接收（助手可能仍在执行）" : waiting ? "请先回应对话卡片" : !input.trim() && followUps.length > 0 ? "发送这条推荐追问" : "发送消息"}
                 >
                   <button
                     aria-label={busy ? "停止接收" : "发送消息"}
                     className="grid size-8 place-items-center rounded-full bg-[#222a37] text-white transition-colors hover:bg-primary disabled:opacity-20"
                     disabled={
                       !busy &&
-                      (input.trim().length < 2 ||
+                      (outgoingText.length < 2 ||
                         pending ||
                         loading ||
                         connected !== true)
@@ -946,11 +1064,6 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                 </PromptInputAction>
               </PromptInputActions>
             </PromptInput>
-            <p className="mt-3 text-center text-[9px] leading-5 text-[#a8aeba]">
-              {busy
-                ? "停止接收只关闭当前显示，助手可能继续执行。"
-                : `AI 回答可能存在偏差，请结合资料判断。${demo.disclaimer}`}
-            </p>
           </div>
         </main>
         {inspector && (

@@ -4,7 +4,7 @@ import { getProfile, months, robotSnapshot } from "@/lib/robot/service";
 import { validDemoContext } from "@/lib/demo-profiles";
 import { contosoSnapshot, getCustomer } from "@/lib/contoso/service";
 import {
-  connected,
+  chatStatus,
   agentRequest,
   history,
   platformUser,
@@ -26,11 +26,10 @@ export async function GET(request: Request, context: Context) {
   try {
     const { path } = await context.params;
     const url = new URL(request.url);
-    if (path[0] === "status")
-      return Response.json({
-        connected: connected(url.searchParams.get("demo") ?? "robot-assistant"),
-        mode: "agent-studio",
-      });
+    if (path[0] === "status") {
+      const status = await chatStatus(url.searchParams.get("demo") ?? "robot-assistant");
+      return Response.json({ ...status, mode: "agent-studio" });
+    }
     if (path[0] === "contoso") {
       const customer = url.searchParams.get("customer") ?? "1";
       if (!getCustomer(customer)) throw new HttpError(400, "无效的模拟客户");
