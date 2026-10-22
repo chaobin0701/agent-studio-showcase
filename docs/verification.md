@@ -8,7 +8,7 @@
 
 | 范围         | 当前证据                                                                                                                                                   |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 独立项目     | 同级 `agent-studio-showcase`，Next.js 16 / React 19 / TypeScript，独立配置与 SQLite 路由数据；Git 分支 `codex/demo-hub`                                                 |
+| 独立项目     | 同级 `agent-studio-showcase`，Next.js 16 / React 19 / TypeScript，独立配置与 SQLite 路由数据；Git 分支 `main`                                                 |
 | 现成 UI      | 固定提交的 Solid Hero/SectionHeader/素材与 Zola 输入、消息、Markdown、滚动组件；完整来源和许可见 `THIRD_PARTY_NOTICES.md`                                  |
 | 页面         | 首页、2 个项目详情、3 个 Demo 详情/聊天入口、目录、工具、致谢、OpenAPI 与图标共 15 个地址返回 200；未知项目/Demo 返回 404                                  |
 | 业务数据     | 10 个模拟家庭 × 12 个原始月份，共 120 条记录；城市与天气固定；不存在月份返回缺失，参数与多余字段校验通过                                                   |
