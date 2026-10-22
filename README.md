@@ -1,117 +1,167 @@
 # Agent Studio Showcase
 
-Agent Studio 官方展示站（React / Next.js）。官网采用 **Solid Free**，聊天复用 **Zola** 的对话、输入、消息、Markdown 与滚动组件。Agent Studio 作为可替换的后端适配器，通过公开 API 接入。
+[在线体验](https://hexu.7410000.xyz/) · [平台核心源码 (Agent Studio)](https://github.com/chaobin0701/agent-studio) · [系统实现与架构](#系统实现与技术架构)
 
-Agent Studio 平台源码：[chaobin0701/agent-studio](https://github.com/chaobin0701/agent-studio)。
+**Agent Studio Showcase** 是基于 Next.js 与 React 构建的官方产品官网与业务场景演示站。作为 [Agent Studio](https://github.com/chaobin0701/agent-studio) 通用智能体平台的配套前台，它既是对外展示平台定位、技术架构与核心亮点的门户，也是检验智能体落地能力的真实体验场。
 
-## 本地体验
+平台核心负责 Agent 编排、模型调度、版本流转与权限控制；展示站则负责提供贴近真实业务的交互界面，并通过标准化的 HTTP 与 MCP 工具向平台输出模拟领域数据，实现“平台通用、业务解耦”的设计初衷。
 
-- 首页：<http://127.0.0.1:3300/>
-- 扫地机器人应用介绍：<http://127.0.0.1:3300/projects/robot-lab>
-- 扫地机器人聊天：<http://127.0.0.1:3300/chat/robot-assistant>
-- 户外装备顾问介绍与商品目录：<http://127.0.0.1:3300/projects/contoso-outdoor>
-- 户外顾问聊天：<http://127.0.0.1:3300/chat/contoso-outdoor>
-- 数据与工具：<http://127.0.0.1:3300/tools>
-- OpenAPI：<http://127.0.0.1:3300/api/openapi>
+---
 
-知识问答、清洁报告与天气建议属于同一个 Demo，聊天不需要切换模式。推荐问题混合展示三种能力，每次显示三条，桌面为一行三列；点击“换一组”轮换问题，选中问题只填入当前输入框。
+## 核心展示场景
 
-Contoso Outdoor 是另一个独立 Demo，包含选购比较、说明书问答、模拟购买记录与搭配建议。提供 20 件样例商品、20 份中文说明书、12 位中文名称虚构客户和 32 条 2023 年购买记录；采用独立人民币模拟价格，2023 年模拟订单金额按该定价重算；英文原始资料保留。说明书由 Agent Studio 知识库检索，商品和购买记录通过只读工具查询。接入详情见 [docs/contoso-integration.md](docs/contoso-integration.md)。
+展示站内置了两个具有代表性的垂直业务场景，验证智能体在不同任务复杂度下的执行表现：
 
-聊天右上角的数据按钮可切换 **10 个模拟家庭、12 个示例月份**。换家庭或月份时开始新对话，旧会话保留。使用记录来自参考项目的 120 条公开样本，原始日期为 **2025 年**；天气是固定样本，非实时天气。AI 回答来自真实 Agent 调用。
+### 1. 扫地机器人智能助理 (Robot Assistant)
+* **场景定位**：智能硬件售后与家庭清洁顾问。
+* **多能力融合**：在同一段对话中无缝衔接**知识库排障问答**（设备常见故障与使用指南）、**清洁报告生成**（结合指定家庭历史运行数据进行结构化分析）以及**拖地建议**（读取家庭所在城市的天气状况输出生活提示），用户无需手动切换不同模式。
+* **数据与模拟**：内置 10 组家庭模拟档案与 12 个历史月份运行数据，支持在界面中切换不同家庭与月份进行多维度验证。
 
-## 启动
+### 2. 户外装备顾问 (Contoso Outdoor)
+* **场景定位**：专业零售导购与装备使用咨询（参考微软 Contoso Chat 业务模型深度重构）。
+* **知识与目录**：提供 20 件户外装备的中文参数规格、20 份装备使用说明书，以及 12 位中文客户档案与历史购买记录（采用统一的人民币模拟价格）。
+* **人机协作与审批**：
+  * **意图澄清 (`ask_user`)**：当用户提问模糊或存在多项选择（如选购预算、出行人数）时，Agent 自动发起交互式提问，前端呈现单选选项与自由补充输入框。
+  * **操作审批**：当 Agent 尝试调取涉及隐私的历史购买记录等敏感工具时，触发审批机制，用户确认后才执行真实工具调用。
 
-需要 Node.js 24.12 或更高版本。本站不依赖 Docker 或 Supabase；只有接入的 Agent Studio 使用其独立数据库。
+---
 
-```sh
-npm install
-node scripts/setup.mjs
-npm run dev
-```
+## 系统实现与技术架构
 
-`setup` 只在不存在时生成本站独立的 `.env.local`。已经配置过的环境文件会保留。开发默认监听 `127.0.0.1:3300`。
-
-```sh
-npm run typecheck
-npm test
-npm run build
-npm start
-```
-
-生产部署支持单个 Node 进程或 Next.js standalone；运行时应持久化 `.data/` 并注入环境变量。Cookie 签名密钥应长期保留；更换后匿名访客无法继续访问原有会话。使用 HTTPS 部署时将 `SITE_ORIGIN` 改成精确站点地址，Cookie 自动使用 Secure。
-
-## 聊天适配
-
-配置均在 `.env.local`，不读取 Agent Studio 或其他来源仓库的环境文件、不共享数据库：
-
-| 变量                    | 用途                                          |
-| ----------------------- | --------------------------------------------- |
-| `SITE_ORIGIN`           | 本站完整 Origin，默认 `http://127.0.0.1:3300` |
-| `SESSION_SECRET`        | 本站匿名访客签名                              |
-| `TOOL_API_TOKEN`        | HTTP / MCP 工具认证                           |
-| `AGENT_STUDIO_BASE_URL` | 后端公开 API 地址，包含 `/api`                |
-| `AGENT_STUDIO_AGENT_ID` | 接入的 Agent 资源 ID                          |
-| `AGENT_STUDIO_API_KEY`  | 已启用平台应用签发的服务端密钥                |
-| `AGENT_STUDIO_CONTOSO_AGENT_ID` | 户外装备顾问独立 Agent ID |
-| `AGENT_STUDIO_CONTOSO_API_KEY` | 户外顾问独立应用的服务端接入密钥 |
-| `CONTOSO_TOOL_API_TOKEN` | 户外商品 HTTP / MCP 工具的独立令牌 |
-| `HUB_DATA_DIR`          | 可选，本站 SQLite 路由数据目录，默认 `.data`  |
-
-当前本机接入：工作空间 4、Agent 5、应用 `8fcc3084-130b-4486-a36d-8d370b74dd71`；已验证的生效版本为 12，原版本 11 保留。没有修改应用启用状态或 Origin。接入密钥仅保存于本站服务端，工具令牌在 Agent Studio 中通过其既有加密凭证管理保存。
-
-`scripts/connect-agent.ts` 是显式运行的本地配置操作：保存原配置、创建接入密钥与工具凭证、真实测试 7 个 HTTP 工具、发现 MCP 契约、发布业务 Prompt 和更新 Agent 工具绑定。**运行会修改并发布本地 Agent 配置**，普通启动与自动测试不会调用它。管理员凭据通过当前进程的 `DEMO_ADMIN_LOGIN` / `DEMO_ADMIN_PASSWORD` 提供，不写入项目文件。
-
-业务 Prompt 见 [docs/robot-agent-prompt.txt](docs/robot-agent-prompt.txt)。报告栏目用普通业务指导与只读工具表达，不复制原 Python 项目的动态提示词中间件或 Agent 执行循环。
-
-`scripts/connect-contoso.ts --apply` 是另一个显式配置入口：导入说明书到知识库并等待索引、发布 Prompt、验证并发布 6 个 HTTP 工具、发现独立 MCP 目录、发布户外 Agent 并创建仅 API 接入的应用与密钥。它复用已发布模型方案，不修改机器人 Agent 或其接入。配置可重跑，实际状态保存在忽略目录 `.data/contoso-connection/`；`--prepare` 只准备知识库与 Prompt。管理员密码仅通过当前进程提供。
-
-`scripts/verify-contoso-live.ts` 会调用真实模型，必须显式运行，不在普通测试中执行。它检查 HTTP/MCP 一致性、凭证与来源、选购、说明书引用、多轮追问、购买记录汇总、无匹配条件、客户及 Demo 隔离，并将结果保存在忽略目录 `output/verification/`。`CONTOSO_VERIFICATION_TAG` 可区分不同轮次的验证投递记录。
-
-## 工具与数据
-
-`lib/robot/service.ts` 是模拟业务数据入口，`lib/robot/tools.ts` 定义共享校验与工具行为。页面、HTTP 与 MCP 共用它们。未来接真实业务系统时，在此服务层替换数据读取，不需要改 Agent Studio 的平台代码。
-
-所有工具只读，通过 `Authorization: Bearer <TOOL_API_TOKEN>` 认证：
+Showcase 采用前后端一体的轻量化架构，重点解决现代 AI 应用在体验流畅度、安全性以及架构解耦上的挑战：
 
 ```text
-GET  /api/tools/list_demo_users
-GET  /api/tools/get_user_id?user_id=1003
-GET  /api/tools/get_user_location?user_id=1003
-GET  /api/tools/get_current_month
-GET  /api/tools/get_weather?city=杭州
-GET  /api/tools/fetch_external_data?user_id=1003&month=2025-12
-GET  /api/tools/fill_context_for_report
-POST /api/mcp                           Streamable HTTP，stateless
+┌────────────────────────────────────────────────────────┐
+│               Agent Studio Showcase                    │
+│                                                        │
+│  ┌──────────────────────┐    ┌──────────────────────┐  │
+│  │   现代化聊天交互界面   │    │  独立领域服务 (Mock)   │  │
+│  │   (React 19 / UI)    │    │  (商品/用户/天气/记录) │  │
+│  └──────────┬───────────┘    └──────────┬───────────┘  │
+│             │                           ▲              │
+│    SSE 消息 / 交互卡片                   │ HTTP / MCP   │
+│             ▼                           │ 工具调用     │
+│  ┌──────────────────────┐               │              │
+│  │  轻量服务端代理与鉴权  │               │              │
+│  │  (Next.js App Router)│               │              │
+│  └──────────┬───────────┘               │              │
+└─────────────┼───────────────────────────┼──────────────┘
+              │ 签发访客凭证 / 中继对话      │
+              ▼                           │
+┌─────────────────────────────────────────┴──────────────┐
+│                  Agent Studio 平台核心                  │
+│                                                        │
+│  • Agent 执行循环 (ReAct / Deep Agents)                 │
+│  • 知识库混合检索 (Hybrid RAG)                          │
+│  • 工具编排、版本管理与执行审计                          │
+└────────────────────────────────────────────────────────┘
 ```
 
-`get_current_month` 区分真实当前月份和样本月份；查询不存在的记录返回 `found=false`。身份、城市和天气保持稳定，不沿用参考项目中的随机选择。`fill_context_for_report` 只返回栏目约定，不改变系统提示词或运行状态。
+### 1. 现代化的交互界面实现
+* **技术基座**：采用 **Next.js 16 (App Router)**、**React 19**、**TypeScript** 与 **Tailwind CSS**，结合 Radix UI 与 Framer Motion 构建细腻的交互微动画与沉浸式暗色/亮色自适应界面。
+* **对话与内容渲染**：支持 Markdown 格式化、代码高亮、长文本自动滚动锚定与停止生成控制。
+* **上下文容量指示器**：在输入框附近集成圆形进度环，实时计算并直观展示当前对话在模型窗口中的 Token 占用与剩余额度。
+* **推荐追问与预填**：解析服务端返回的结构化推荐追问（`suggestedFollowUps`），首条建议自动融入输入框占位提示，支持快捷键 Tab/Enter 一键发送或点击填入草稿。
 
-本地 Agent Studio 按其已有网络策略显式登记 `AGENT_TOOL_ALLOWED_HOSTS=127.0.0.1`，HTTP/MCP 仍使用受限传输、凭证引用、统一工具执行与审计，没有增加业务特权通道。
+### 2. 业务与平台彻底解耦
+* 业务数据（商品明细、清洁日志、天气信息）由 Showcase 服务端直接提供，没有侵入式写入 Agent Studio 核心系统。
+* Showcase 统一暴露只读的 **HTTP 接口**与符合规范的 **MCP (Model Context Protocol) 端点**，由 Agent Studio 在后台以标准工具的形式挂载，保证平台内核的高度通用性。
 
-## 会话与恢复
+### 3. 会话隔离与服务端安全代理
+* **凭据隔离**：客户端浏览器不直接接触 Agent Studio 平台 API Key，所有对话请求经由 Showcase 服务端进行安全中继。
+* **访客身份控制**：基于 HttpOnly 签名 Cookie 派生独立访客身份，实现不同访客、不同 Demo 和不同模拟家庭之间的数据与会话完全隔离。
+* **断流与幂等重放**：客户端记录投递状态与请求标识，收到完整结束信号前支持幂等重连与状态恢复，避免重复生成回答。
 
-旧的 `robot-report` / `robot-weather` 链接会转到统一入口，旧会话合并展示在同一个列表中。保留旧会话原始的后端身份与 ID，不重写或合并对话正文。
+### 4. 人机协作闭环 (Human-in-the-Loop)
+* 当 Agent Studio 检测到需要用户介入（`interaction_required`）时，后端中断当前执行流并下发交互协议。
+* Showcase 前台即时接管输入区域，动态渲染结构化选项卡片或敏感工具审批面板。
+* 用户提交选择或跳过操作后，Showcase 恢复原执行任务；已处理的历史交互自动折叠收纳在工具调用时间线内。
 
-- 本站保存匿名访客、Demo/模拟家庭、会话路由与投递记录（包含原始提问，用于幂等重放）；不保存助手回答。完整对话历史与执行以 Agent Studio 为准。
-- HttpOnly 签名 Cookie 确定访客，平台 `userId` 在服务端派生；不同访客、Demo 和模拟家庭隔离。
-- 请求保留原始正文与幂等标识。收到 `done` 才确认完成，断流不会自动重新生成回答。
-- 两个聊天入口共用补充信息与工具审批卡片。Agent Studio 发出 `interaction_required` 后，本次投递进入 `waiting`，普通输入暂停；选项每行一项，可单独填写回答或为所选项补充信息，底部右侧提交。选项由 Agent 生成，不内置预算等业务规则。“跳过”明确告知 Agent 用户未提供答案，并继续原任务。
-- 工具审批只展示名称与说明，用户可批准／拒绝本次调用，卡片不展示调用参数。答复走独立服务端代理，按匿名访客、Demo、会话和交互归属校验；浏览器不能指定平台用户或改写待审批参数。刷新恢复待处理卡片，已处理卡片保存在默认折叠的“工具调用过程”中；网络结果不明时先读取状态，不自动重复答复或重放原消息。
-- **停止接收只停止浏览器显示**，不会取消正在执行的任务；刷新状态可读取已完成结果。跳过问题也不取消任务，平台原有的显式取消接口继续保留。
-- 若首轮尚未确认，可点击“恢复原请求”，使用原标识和原正文恢复；该操作可能启动此前未被服务端接受的请求。运行中返回冲突时稍后刷新，不能换标识自动重发。
-- 删除会话会删除对应 Agent Studio 历史，界面有确认步骤。
+---
 
-## 验证与回退
+## 快速开始
 
-`npm test` 使用临时数据和本地模拟传输，验证数据语义、参数边界、UTF-8 / SSE 拆包、会话归属、幂等重放、等待恢复、同一任务中的提问与审批，以及停止接收后的结果保存，不调用真实模型。
+### 环境依赖
+* **Node.js**：`>= 24.12.0`
+* **Agent Studio**：需配合运行中的 [Agent Studio](https://github.com/chaobin0701/agent-studio) 平台提供对话与知识检索服务（本地开发默认连接 `http://127.0.0.1:3020`）。
 
-显式执行 `npx tsx scripts/verify-live.ts` 会调用已配置的真实 Agent，验证知识问答、模拟天气和报告三条链路，以及 7 个工具的 HTTP/MCP 一致性、会话隔离和历史恢复。结果在忽略的 `output/verification/live.json`，不会随源码提交。
+### 本地启动
 
-配置前后记录位于忽略的 `.data/agent-connection/`。回退可在 Agent Studio 管理后台将 Agent 5 切回版本 11；原 Prompt、知识库、模型和 Skill 均保留。若停用本站，可撤销名为 `Demo Hub local server` 的接入密钥，并在工具管理停用本站工具与连接。
+1. **安装依赖**：
+   ```sh
+   npm install
+   ```
 
-## 来源与许可
+2. **初始化环境配置**：
+   ```sh
+   node scripts/setup.mjs
+   ```
+   *该脚本会在不存在时生成独立的 `.env.local` 文件，已有配置会被保留。*
 
-完整来源提交、复用路径与修改说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，原始许可在 `licenses/`。此前的模板候选保留在 `docs/style-options.md`，历史草案在 `docs/architecture-draft.md`。
+3. **启动开发服务**：
+   ```sh
+   npm run dev
+   ```
+   默认启动在 `http://127.0.0.1:3300/`。
 
-本站原创代码采用 [MIT 许可](LICENSE)；引入的模板、组件、样例数据及其他第三方材料保留其各自许可，见上述来源文件。
+4. **常用验证指令**：
+   ```sh
+   npm run typecheck    # TypeScript 类型校验
+   npm test             # 单元与集成测试（不依赖外部模型）
+   npm run build        # Next.js 生产环境构建
+   npm start            # 生产模式本地运行
+   ```
+
+---
+
+## 环境变量配置
+
+所有配置项均维护在独立的 `.env.local` 中，与平台环境彻底隔离：
+
+| 环境变量 | 必填 | 默认值 | 说明 |
+| :--- | :---: | :--- | :--- |
+| `SITE_ORIGIN` | 是 | `http://127.0.0.1:3300` | 展示站完整公网/本地 Origin |
+| `SESSION_SECRET` | 是 | 随机字符串 | 匿名访客签名密钥，更换会导致访客历史丢失 |
+| `TOOL_API_TOKEN` | 是 | - | 扫地机器人 HTTP / MCP 工具的认证 Bearer Token |
+| `AGENT_STUDIO_BASE_URL` | 是 | `http://127.0.0.1:3020/api` | Agent Studio 平台公开 API 地址 |
+| `AGENT_STUDIO_AGENT_ID` | 是 | - | 接入的扫地机器人 Agent 资源 ID |
+| `AGENT_STUDIO_API_KEY` | 是 | - | 扫地机器人应用的服务端接入密钥 |
+| `CONTOSO_TOOL_API_TOKEN` | 是 | - | 户外装备 HTTP / MCP 工具的独立认证令牌 |
+| `AGENT_STUDIO_CONTOSO_AGENT_ID` | 是 | - | 接入的户外装备顾问 Agent 资源 ID |
+| `AGENT_STUDIO_CONTOSO_API_KEY` | 是 | - | 户外装备应用的服务端接入密钥 |
+| `HUB_DATA_DIR` | 否 | `.data` | 本站轻量会话与路由数据目录 |
+
+---
+
+## 接口与业务数据暴露
+
+展示站内置的领域数据服务对外提供只读查询接口，供 Agent Studio 的 Tool / MCP 模块调用（均需 `Authorization: Bearer <TOKEN>`）：
+
+### 扫地机器人工具端点
+* `GET /api/tools/list_demo_users`：获取模拟家庭列表
+* `GET /api/tools/get_user_id?user_id=1003`：查询家庭基础信息
+* `GET /api/tools/get_user_location?user_id=1003`：查询所在城市
+* `GET /api/tools/get_weather?city=杭州`：获取指定城市的模拟天气状况
+* `GET /api/tools/fetch_external_data?user_id=1003&month=2025-12`：拉取指定月份清洁与耗材记录
+* `POST /api/mcp`：以 Streamable HTTP 协议暴露上述工具集供 MCP 客户端直接发现和挂载
+
+### 户外装备顾问端点
+* `GET /api/contoso/tools/search_products`：多维度搜索户外装备目录
+* `GET /api/contoso/tools/get_product`：读取特定装备的详细参数
+* `GET /api/contoso/tools/get_customer_profile`：获取模拟客户档案
+* `GET /api/contoso/tools/list_customer_orders`：获取模拟客户的购买历史记录
+* `POST /api/contoso/mcp`：提供符合 MCP 协议的户外装备工具目录
+
+---
+
+## 验证与测试
+
+* **自动化测试 (`npm test`)**：基于 Node.js 原生测试套件与临时隔离目录，严格校验领域数据语义、参数边界防御、UTF-8 / SSE 协议分包解析、访客会话隔离、提问与审批交互状态机以及流式断流恢复，无需消耗实际模型 Token。
+* **端到端线上验收 (`scripts/verify-live.ts`)**：连接运行中的 Agent Studio 进行真实端到端对话回归测试，验证工具发现、意图推理、知识库召回和历史记录闭环。
+
+---
+
+## 来源与第三方许可
+
+* 完整来源提交、复用路径与修改说明参见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+* 本项目原创代码采用 [MIT 许可证](LICENSE) 开源；引入的开源组件、样例数据与第三方图标资源均保留其原版权声明与许可。
