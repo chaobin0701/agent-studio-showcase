@@ -73,7 +73,7 @@ test("interaction submissions accept only one answer or a scoped decision", () =
 });
 
 test("waiting deliveries restore cards without replay, then resume the same request through question and approval", async (t) => {
-  const directory = mkdtempSync(join(tmpdir(), "demo-hub-interactions-"));
+  const directory = mkdtempSync(join(tmpdir(), "agent-studio-showcase-interactions-"));
   process.env.HUB_DATA_DIR = directory;
   process.env.AGENT_STUDIO_API_KEY = "test-key";
   const conversationId = randomUUID(),

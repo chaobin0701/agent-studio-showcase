@@ -1,6 +1,6 @@
-# Demo Hub
+# Agent Studio Showcase
 
-独立的 React / Node.js 项目展示站。官网采用 **Solid Free**，聊天复用 **Zola** 的对话、输入、消息、Markdown 与滚动组件。Agent Studio 作为可替换的后端适配器，通过公开 API 接入。
+Agent Studio 官方展示站（React / Next.js）。官网采用 **Solid Free**，聊天复用 **Zola** 的对话、输入、消息、Markdown 与滚动组件。Agent Studio 作为可替换的后端适配器，通过公开 API 接入。
 
 Agent Studio 平台源码：[chaobin0701/agent-studio](https://github.com/chaobin0701/agent-studio)。
 

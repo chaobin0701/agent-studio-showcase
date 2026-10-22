@@ -24,7 +24,7 @@ import {
 } from "../lib/server/agent-studio";
 
 test("thread ownership, Demo routing, native streaming and idempotent first-turn replay", async (t) => {
-  const directory = mkdtempSync(join(tmpdir(), "demo-hub-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "agent-studio-showcase-test-"));
   process.env.HUB_DATA_DIR = directory;
   const received: {
     key: string;

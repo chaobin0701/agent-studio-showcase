@@ -49,7 +49,7 @@ export function PlatformSections() {
         <div className="platform-stack-table-wrap"><table className="platform-stack-table platform-highlights-table"><thead><tr><th scope="col">核心亮点</th><th scope="col">实现说明</th></tr></thead><tbody>{highlights.map(([name, body]) => <tr key={name}><th scope="row">{name}</th><td>{body}</td></tr>)}</tbody></table></div>
       </section>
       <section className="platform-page-section" aria-labelledby="stack-title">
-        <div className="platform-section-intro"><h2 id="stack-title">技术栈与职责</h2><p>下表只列 Agent Studio 平台自身的技术；Demo Hub 是独立的 Next.js 展示项目。</p></div>
+        <div className="platform-section-intro"><h2 id="stack-title">技术栈与职责</h2><p>下表只列 Agent Studio 平台自身的技术；Agent Studio Showcase 是独立的 Next.js 展示项目。</p></div>
         <div className="platform-stack-table-wrap"><table className="platform-stack-table"><thead><tr><th scope="col">层级</th><th scope="col">主要技术</th><th scope="col">职责</th></tr></thead><tbody>{platformStack.map(([name, tech, body]) => <tr key={name}><th scope="row">{name}</th><td>{tech}</td><td>{body}</td></tr>)}</tbody></table></div>
       </section>
       <div className="platform-page-end"><p>想看看这些能力如何用于实际应用？</p><Link href="/projects" className="primary-button">浏览应用 <ArrowUpRight size={16} /></Link></div>

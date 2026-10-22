@@ -1,4 +1,4 @@
-# Demo Hub
+# Agent Studio Showcase
 
 Independent Next.js/React/Node showcase project. Agent Studio is an optional external adapter, never a shared database or imported runtime.
 

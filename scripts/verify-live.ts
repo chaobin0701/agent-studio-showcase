@@ -27,7 +27,7 @@ assert.equal(
   401,
 );
 const client = new Client({
-  name: "demo-hub-live-verification",
+  name: "agent-studio-showcase-live-verification",
   version: "1.0.0",
 });
 await client.connect(
