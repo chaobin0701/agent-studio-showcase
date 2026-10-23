@@ -7,12 +7,15 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 3300",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "ui:catalog": "tsx scripts/export-ui-catalog.ts",
+    "ui:catalog:check": "tsx scripts/export-ui-catalog.ts --check"
   },
   "engines": {
     "node": ">=24.12.0"
   },
   "dependencies": {
+    "@assistant-ui/generative-ui": "0.0.7",
     "@modelcontextprotocol/sdk": "1.32.1",
     "@phosphor-icons/react": "^2.1.7",
     "@radix-ui/react-avatar": "^1.1.3",

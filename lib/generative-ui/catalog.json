@@ -1,0 +1,455 @@
+{
+  "adapter": "assistant-ui",
+  "version": "bc636bda7efa84fd9433164ff14f47031464fb5b4ba62d3942c96fb9e9110818",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "_type": {
+        "type": "string",
+        "enum": [
+          "Card",
+          "Row",
+          "Fact",
+          "Chart",
+          "Table"
+        ],
+        "description": "The component to render. \"Card\": 摘要卡片，可包含标题、说明和子组件。; \"Row\": 横向排列子组件，小屏幕自动换行。; \"Fact\": 单个指标：名称、值和可选说明。; \"Chart\": 展示一组有序数据的柱状图或折线图。数值必须来自真实查询结果，不得编造。; \"Table\": 只读数据表。每行单元格按 columns 顺序提供。"
+      },
+      "_key": {
+        "description": "Stable identity for this UI node. Use it for list items that may reorder.",
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "title": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "label": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "value": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 500
+          },
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "detail": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "chartType": {
+        "type": "string",
+        "enum": [
+          "bar",
+          "line"
+        ]
+      },
+      "points": {
+        "minItems": 1,
+        "maxItems": 30,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "value": {
+              "type": "number",
+              "minimum": -1000000000000,
+              "maximum": 1000000000000
+            }
+          },
+          "required": [
+            "label",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "unit": {
+        "type": "string",
+        "maxLength": 30
+      },
+      "caption": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "columns": {
+        "minItems": 1,
+        "maxItems": 8,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "maxLength": 100
+        }
+      },
+      "rows": {
+        "maxItems": 30,
+        "type": "array",
+        "items": {
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        }
+      },
+      "children": {
+        "$ref": "#/$defs/children"
+      }
+    },
+    "required": [
+      "_type"
+    ],
+    "$defs": {
+      "node": {
+        "type": "object",
+        "properties": {
+          "_type": {
+            "type": "string",
+            "enum": [
+              "Card",
+              "Row",
+              "Fact",
+              "Chart",
+              "Table"
+            ],
+            "description": "The component to render. \"Card\": 摘要卡片，可包含标题、说明和子组件。; \"Row\": 横向排列子组件，小屏幕自动换行。; \"Fact\": 单个指标：名称、值和可选说明。; \"Chart\": 展示一组有序数据的柱状图或折线图。数值必须来自真实查询结果，不得编造。; \"Table\": 只读数据表。每行单元格按 columns 顺序提供。"
+          },
+          "_key": {
+            "description": "Stable identity for this UI node. Use it for list items that may reorder.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "chartType": {
+            "type": "string",
+            "enum": [
+              "bar",
+              "line"
+            ]
+          },
+          "points": {
+            "minItems": 1,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": -1000000000000,
+                  "maximum": 1000000000000
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "caption": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "columns": {
+            "minItems": 1,
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          "rows": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            }
+          },
+          "children": {
+            "$ref": "#/$defs/children"
+          }
+        },
+        "required": [
+          "_type"
+        ]
+      },
+      "children": {
+        "description": "Nested generative UI rendered inside this component.",
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/$defs/node"
+          },
+          {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/node"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "Card": {
+      "description": "摘要卡片，可包含标题、说明和子组件。",
+      "children": true,
+      "props": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "Row": {
+      "description": "横向排列子组件，小屏幕自动换行。",
+      "children": true,
+      "props": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    "Fact": {
+      "description": "单个指标：名称、值和可选说明。",
+      "children": false,
+      "props": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "Chart": {
+      "description": "展示一组有序数据的柱状图或折线图。数值必须来自真实查询结果，不得编造。",
+      "children": false,
+      "props": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "chartType": {
+            "type": "string",
+            "enum": [
+              "bar",
+              "line"
+            ]
+          },
+          "points": {
+            "minItems": 1,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": -1000000000000,
+                  "maximum": 1000000000000
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 30
+          }
+        },
+        "required": [
+          "title",
+          "chartType",
+          "points"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "Table": {
+      "description": "只读数据表。每行单元格按 columns 顺序提供。",
+      "children": false,
+      "props": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "caption": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "columns": {
+            "minItems": 1,
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          "rows": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "caption",
+          "columns",
+          "rows"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

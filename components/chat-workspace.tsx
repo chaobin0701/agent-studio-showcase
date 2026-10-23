@@ -56,6 +56,8 @@ import { ContosoData } from "@/components/contoso-data";
 import { suggestedFollowUps } from "@/lib/suggestions";
 import { sseParser } from "@/lib/sse";
 import type { Thread } from "@/lib/server/store";
+import { GenerativeUiBlocks } from "@/components/generative-ui";
+import { readUiBlocks, upsertUiBlock, type UiBlock } from "@/lib/generative-ui/blocks";
 import { ChatInteraction, InteractionRecord } from "@/components/chat-interaction";
 import type { ChatInteraction as Interaction, ChatInteractionResponse } from "@/lib/interactions";
 
@@ -70,6 +72,7 @@ type ChatMessage = {
   status?: string;
   refused?: boolean;
   structured?: unknown;
+  uiBlocks?: UiBlock[];
   interactions?: Interaction[];
   contextUsage?: {
     model: string;
@@ -118,6 +121,7 @@ const toolLabels: Record<string, string> = {
   contoso_get_customer: "查询模拟客户背景",
   contoso_get_orders: "读取模拟购买记录",
   ask_user: "补充信息",
+  present: "生成可视化界面",
 };
 function PublicActivity({ events = [], interactions = [] }: { events?: PublicProgress[]; interactions?: Interaction[] }) {
   const tools = new Map<string, PublicProgress>();
@@ -277,6 +281,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
       const restoredMessages = data.messages.map((message: ChatMessage) => ({
         ...message,
         content: publicText(message.content),
+        uiBlocks: readUiBlocks(message.uiBlocks),
         ...(message.role === "assistant" && !message.status ? { status: "completed" } : {}),
       }));
       setCurrent(data.thread);
@@ -382,6 +387,9 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     if (!response.body) throw new Error("连接没有返回内容");
     let settled = false;
     const parser = sseParser(({ event, data }) => {
+      if (event === "tool_ui") {
+        setMessages(previous => previous.map(value => value.id === assistantId ? { ...value, uiBlocks: upsertUiBlock(value.uiBlocks, data) } : value));
+      }
       if (event === "progress") {
         const entry = data as PublicProgress;
         setProgress(
@@ -461,6 +469,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                     []) as ChatMessage["citations"],
                   contextUsage: data.contextUsage as ChatMessage["contextUsage"],
                   structured: data.structured,
+                  uiBlocks: readUiBlocks(data.uiBlocks),
                   refused: data.refused === true,
                 }
               : value,
@@ -826,6 +835,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                         {message.content ||
                           (busy ? "正在查询…" : "本轮没有完整回答。")}
                       </MessageContent>}
+                      {message.role === "assistant" && !!message.uiBlocks?.length && <GenerativeUiBlocks blocks={message.uiBlocks} />}
                       {message.role === "assistant" && message.interactions?.filter(interaction => interaction.status === "pending").map((interaction) => <ChatInteraction
                         key={interaction.id} interaction={interaction} disabled={busy || loading || !waiting}
                         submitting={respondingId === interaction.id} error={interactionErrors[interaction.id]}
