@@ -1,6 +1,8 @@
+import type { UiSubmission } from "../generative-ui/actions";
 import { HttpError } from "./security";
 import {
   beginRequest,
+  uiReceipts,
   finishRequest,
   pending,
   savedRequest,
@@ -95,7 +97,7 @@ export async function agentRequest(
 }
 export async function history(thread: Thread) {
   const active = pending(thread.id);
-  if (!thread.upstream_id) return { messages: [], pending: active ?? null };
+  if (!thread.upstream_id) return { messages: [], pending: active ?? null, uiReceipts: uiReceipts(thread.id) };
   const query = new URLSearchParams({ userId: platformUser(thread) });
   const runs = await runsForThread(thread);
   if (active) {
@@ -119,7 +121,6 @@ export async function history(thread: Thread) {
     )
   ).json();
   for (const run of runs) {
-    if (!run.interactions?.length) continue;
     const assistant =
       run.assistantMessageId == null
         ? undefined
@@ -129,10 +130,12 @@ export async function history(thread: Thread) {
               String(message.id) === String(run.assistantMessageId),
           );
     if (assistant) {
-      assistant.interactions = run.interactions;
-      assistant.runId = run.integrationCallId;
       assistant.status = run.status;
+      assistant.runId = run.integrationCallId;
+      if (!run.interactions?.length) continue;
+      assistant.interactions = run.interactions;
     } else {
+      if (!run.interactions?.length) continue;
       // A waiting legacy run has not saved its ordinary user/assistant pair yet.
       const delivery = savedRequest(run.clientRequestId);
       if (delivery?.thread_id !== thread.id) continue;
@@ -158,7 +161,7 @@ export async function history(thread: Thread) {
       ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       : 0,
   );
-  return { messages, pending: pending(thread.id) ?? null };
+  return { messages, pending: pending(thread.id) ?? null, uiReceipts: uiReceipts(thread.id) };
 }
 export async function recoverRequest(thread: Thread) {
   if (thread.upstream_id) await history(thread);
@@ -190,6 +193,7 @@ export async function sendMessage(
   thread: Thread,
   message: string,
   requestId: string,
+  submission?: UiSubmission,
 ) {
   const profile = profileForDemo(thread.demo, thread.persona);
   if (!profile) throw new HttpError(400, "无效的模拟背景");
@@ -214,7 +218,7 @@ export async function sendMessage(
       ...(thread.upstream_id ? { conversationId: thread.upstream_id } : {}),
       stream: true,
     });
-  const old = beginRequest(thread.id, requestId, body);
+  const old = beginRequest(thread.id, requestId, body, submission);
   if (old?.state === "running" || old?.state === "waiting")
     throw new HttpError(409, "消息正在执行，请刷新状态");
   let response: Response;

@@ -56,6 +56,7 @@ import { ContosoData } from "@/components/contoso-data";
 import { suggestedFollowUps } from "@/lib/suggestions";
 import { sseParser } from "@/lib/sse";
 import type { Thread } from "@/lib/server/store";
+import { submissionMessage, receiptKey, type UiSubmission, type UiReceipt } from "@/lib/generative-ui/actions";
 import { GenerativeUiBlocks } from "@/components/generative-ui";
 import { readUiBlocks, upsertUiBlock, type UiBlock } from "@/lib/generative-ui/blocks";
 import { ChatInteraction, InteractionRecord } from "@/components/chat-interaction";
@@ -176,6 +177,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   const [persona, setPersona] = useState(profilesForDemo(demo.slug)[0].id);
   const [month, setMonth] = useState(periodsForDemo(demo.slug)[0]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [uiReceipts, setUiReceipts] = useState<UiReceipt[]>([]);
   const [input, setInput] = useState("");
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -288,6 +290,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
       setPersona(data.thread.persona);
       setMonth(data.thread.month);
       setMessages(restoredMessages);
+      setUiReceipts(data.uiReceipts ?? []);
       setPending(Boolean(data.pending));
       setRecoverable(data.pending?.state === "unknown");
       setWaiting(data.pending?.state === "waiting");
@@ -329,6 +332,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     setLoading(false);
     setCurrent(null);
     setMessages([]);
+    setUiReceipts([]);
     setPending(false);
     setRecoverable(false);
     setWaiting(false);
@@ -493,10 +497,12 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     }
     if (!settled) throw new Error("连接已结束，结果尚未确认。请刷新会话状态。");
   }
-  async function send(text?: string) {
+  async function send(text?: string, uiSubmission?: UiSubmission) {
     const message = (text ?? (input.trim() ? input : followUps[0] ?? "")).trim();
-    if (message.length < 2 || inFlight.current || busy || pending || loading || connected !== true)
+    if (message.length < 2 || inFlight.current || busy || pending || loading || connected !== true) {
+      if (uiSubmission) throw new Error("当前无法提交，请先确认会话状态");
       return;
+    }
     if (message.length > 1600) {
       setError("消息最多 1600 个字符");
       return;
@@ -504,7 +510,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     inFlight.current = true;
     setBusy(true);
     setError("");
-    setInput("");
+    if (!uiSubmission) setInput("");
     setProgress("正在连接助手…");
     const assistantId = crypto.randomUUID();
     const controller = new AbortController();
@@ -533,7 +539,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
         body: JSON.stringify({
           threadId: item.id,
           requestId: crypto.randomUUID(),
-          message,
+          ...(uiSubmission ? { uiSubmission } : { message }),
         }),
         signal: controller.signal,
       });
@@ -543,6 +549,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
       }
       if (!response.body) throw new Error("连接没有返回内容");
       await receive(response, assistantId);
+      if (uiSubmission) setUiReceipts(previous => [...previous.filter(value => receiptKey(value) !== receiptKey(uiSubmission)), { ...uiSubmission, state: "completed" }]);
     } catch (error) {
       setPending(true);
       setRecoverable(true);
@@ -558,6 +565,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
             ? error.message
             : "连接中断，请刷新状态。",
       );
+      if (uiSubmission) throw error;
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -835,7 +843,14 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                         {message.content ||
                           (busy ? "正在查询…" : "本轮没有完整回答。")}
                       </MessageContent>}
-                      {message.role === "assistant" && !!message.uiBlocks?.length && <GenerativeUiBlocks blocks={message.uiBlocks} />}
+                      {message.role === "assistant" && !!message.uiBlocks?.length && <GenerativeUiBlocks blocks={message.uiBlocks}
+                        disabled={busy || pending || loading || connected !== true || message.status !== "completed" || message.incomplete || message.refused}
+                        receipts={uiReceipts}
+                        onSubmit={async submission => {
+                          const block = message.uiBlocks?.find(item => item.blockId === submission.blockId && item.revision === submission.revision);
+                          if (!block) throw new Error("界面已变化，请刷新");
+                          await send(submissionMessage(block, submission), submission);
+                        }} />}
                       {message.role === "assistant" && message.interactions?.filter(interaction => interaction.status === "pending").map((interaction) => <ChatInteraction
                         key={interaction.id} interaction={interaction} disabled={busy || loading || !waiting}
                         submitting={respondingId === interaction.id} error={interactionErrors[interaction.id]}

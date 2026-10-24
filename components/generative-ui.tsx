@@ -2,9 +2,11 @@
 
 import { Component, type ReactNode } from "react";
 import { renderGenerativeUI, type GenerativeUILibrary } from "@assistant-ui/generative-ui/react";
-import { definitions, validTree } from "@/lib/generative-ui/definitions";
-import catalog from "@/lib/generative-ui/catalog.json";
+import { definitions } from "@/lib/generative-ui/definitions";
+import { supportedBlock } from "@/lib/generative-ui/catalogs";
 import type { UiBlock } from "@/lib/generative-ui/blocks";
+import { UiMarkdown, UiAlert, UiImage, UiGallery, UiBadge, UiTag, UiKeyValue, UiSteps, UiTimeline, UiAccordion, UiTabs, UiList } from "./generative-ui-content";
+import { UiActionButton, UiChoice, UiForm, UiConfirmation, UiActionProvider, type UiActionHost } from "./generative-ui-actions";
 
 type Point = { label: string; value: number };
 function Chart({ title, chartType, points, unit = "" }: { title: string; chartType: "bar" | "line"; points: Point[]; unit?: string }) {
@@ -35,6 +37,22 @@ const library = {
   Fact: { ...definitions.Fact, render: ({ label, value, detail }) => <div className="min-w-28 rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 break-words text-xl font-semibold">{value}</p>{detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}</div> },
   Chart: { ...definitions.Chart, render: props => <Chart {...props} /> },
   Table: { ...definitions.Table, render: ({ caption, columns, rows }) => <div className="max-w-full overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><caption className="mb-2 text-left font-medium">{caption}</caption><thead><tr>{columns.map((column: string, i: number) => <th key={i} className="border-b border-border px-3 py-2 font-medium">{column}</th>)}</tr></thead><tbody>{rows.map((row: (string | number)[], i: number) => <tr key={i}>{columns.map((_: string, j: number) => <td key={j} className="border-b border-border px-3 py-2">{row[j] ?? ""}</td>)}</tr>)}</tbody></table></div> },
+  Markdown: { ...definitions.Markdown, render: props => <UiMarkdown {...props} /> },
+  Alert: { ...definitions.Alert, render: props => <UiAlert {...props} /> },
+  Image: { ...definitions.Image, render: props => <UiImage {...props} /> },
+  Gallery: { ...definitions.Gallery, render: props => <UiGallery {...props} /> },
+  Badge: { ...definitions.Badge, render: props => <UiBadge {...props} /> },
+  Tag: { ...definitions.Tag, render: props => <UiTag {...props} /> },
+  KeyValue: { ...definitions.KeyValue, render: props => <UiKeyValue {...props} /> },
+  Steps: { ...definitions.Steps, render: props => <UiSteps {...props} /> },
+  Timeline: { ...definitions.Timeline, render: props => <UiTimeline {...props} /> },
+  Accordion: { ...definitions.Accordion, render: props => <UiAccordion {...props} /> },
+  Tabs: { ...definitions.Tabs, render: props => <UiTabs {...props} /> },
+  List: { ...definitions.List, render: props => <UiList {...props} /> },
+  Choice: { ...definitions.Choice, render: props => <UiChoice {...props} /> },
+  ActionButton: { ...definitions.ActionButton, render: props => <UiActionButton {...props} /> },
+  Form: { ...definitions.Form, render: props => <UiForm {...props} /> },
+  Confirmation: { ...definitions.Confirmation, render: props => <UiConfirmation {...props} /> },
 } satisfies GenerativeUILibrary;
 
 class RenderBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { failed: boolean }> {
@@ -43,9 +61,9 @@ class RenderBoundary extends Component<{ children: ReactNode; fallback: ReactNod
   render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
 function BlockTree({ tree }: { tree: unknown }) { return renderGenerativeUI(tree, library, { status: "done" }); }
-export function GenerativeUiBlocks({ blocks = [] }: { blocks?: UiBlock[] }) {
+export function GenerativeUiBlocks({ blocks = [], ...host }: { blocks?: UiBlock[] } & UiActionHost) {
   return <div className="w-full min-w-0 space-y-4">{blocks.map(block => {
     const fallback = <p className="whitespace-pre-wrap rounded-xl border border-border p-4 text-sm">{block.fallbackText}</p>;
-    return <RenderBoundary key={`${block.blockId}:${block.revision}`} fallback={fallback}>{block.protocolVersion === 1 && block.adapter === "assistant-ui" && block.catalogVersion === catalog.version && validTree(block.tree) ? <BlockTree tree={block.tree} /> : fallback}</RenderBoundary>;
+    return <RenderBoundary key={`${block.blockId}:${block.revision}`} fallback={fallback}>{supportedBlock(block) ? <UiActionProvider block={block} {...host}><BlockTree tree={block.tree} /></UiActionProvider> : fallback}</RenderBoundary>;
   })}</div>;
 }

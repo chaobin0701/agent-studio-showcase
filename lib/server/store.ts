@@ -1,3 +1,4 @@
+import type { UiSubmission, UiReceipt } from "../generative-ui/actions";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -33,6 +34,7 @@ export function db() {
       CREATE TABLE IF NOT EXISTS threads (id TEXT PRIMARY KEY, owner TEXT NOT NULL, demo TEXT NOT NULL, persona TEXT NOT NULL, month TEXT NOT NULL, title TEXT NOT NULL, upstream_id TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
       CREATE INDEX IF NOT EXISTS threads_owner ON threads(owner,demo,updated_at);
       CREATE TABLE IF NOT EXISTS requests (request_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE, body TEXT NOT NULL, state TEXT NOT NULL, error TEXT);
+      CREATE TABLE IF NOT EXISTS ui_submissions (thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE, block_id TEXT NOT NULL, revision INTEGER NOT NULL, component_id TEXT NOT NULL, request_id TEXT NOT NULL UNIQUE REFERENCES requests(request_id) ON DELETE CASCADE, payload TEXT NOT NULL, PRIMARY KEY(thread_id,block_id,revision,component_id));
     `);
   }
   return database;
@@ -92,23 +94,33 @@ export function setTitle(id: string, title: string) {
     )
     .run(title.slice(0, 40), id);
 }
-export function beginRequest(id: string, requestId: string, body: string) {
-  const old = db()
-    .prepare("SELECT * FROM requests WHERE request_id=?")
-    .get(requestId) as Pending | undefined;
-  if (old) {
-    if (old.thread_id !== id || old.body !== body)
-      throw new HttpError(409, "请求标识已用于其他内容");
-    return old;
+export function uiReceipts(id: string): UiReceipt[] {
+  const rows = db().prepare("SELECT s.payload,r.state FROM ui_submissions s JOIN requests r USING(request_id) WHERE s.thread_id=? ORDER BY s.rowid").all(id) as {payload:string;state:string}[];
+  return rows.map(row => ({ ...JSON.parse(row.payload), state: row.state }));
+}
+export function beginRequest(id: string, requestId: string, body: string, submission?: UiSubmission) {
+  const database = db();
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    const old = savedRequest(requestId);
+    const receipt = database.prepare("SELECT payload FROM ui_submissions WHERE request_id=?").get(requestId) as {payload:string} | undefined;
+    if (old) {
+      if (old.thread_id !== id || old.body !== body || receipt?.payload !== (submission ? JSON.stringify(submission) : undefined))
+        throw new HttpError(409, "请求标识已用于其他内容");
+      database.exec("COMMIT");
+      return old;
+    }
+    if (pending(id)) throw new HttpError(409, "上一条消息尚未确认完成，请先刷新会话状态");
+    if (submission && database.prepare("SELECT 1 FROM ui_submissions WHERE thread_id=? AND block_id=? AND revision=? AND component_id=?").get(id, submission.blockId, submission.revision, submission.componentId))
+      throw new HttpError(409, "此界面已经提交，请刷新会话状态");
+    database.prepare("INSERT INTO requests(request_id,thread_id,body,state) VALUES(?,?,?,'running')").run(requestId,id,body);
+    if (submission) database.prepare("INSERT INTO ui_submissions(thread_id,block_id,revision,component_id,request_id,payload) VALUES(?,?,?,?,?,?)").run(id,submission.blockId,submission.revision,submission.componentId,requestId,JSON.stringify(submission));
+    database.exec("COMMIT");
+    return null;
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
   }
-  if (pending(id))
-    throw new HttpError(409, "上一条消息尚未确认完成，请先刷新会话状态");
-  db()
-    .prepare(
-      "INSERT INTO requests(request_id,thread_id,body,state) VALUES(?,?,?,'running')",
-    )
-    .run(requestId, id, body);
-  return null;
 }
 export function finishRequest(
   id: string,
