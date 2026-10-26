@@ -20,7 +20,6 @@ const cases = [
       get_user_id: { user_id: "1001" },
       get_user_location: { user_id: "1001" },
       get_current_month: {},
-      get_weather: { city: "杭州" },
       fetch_external_data: { user_id: "1001", month: "2025-12" },
       fill_context_for_report: {},
     },
@@ -40,6 +39,9 @@ const cases = [
   },
 ];
 
+const weatherResponse = await fetch(`${base}/api/tools/get_weather?city=杭州`, { headers: { authorization: `Bearer ${tokens.robot}` } });
+assert.equal(weatherResponse.status, 200);
+assert.match(JSON.stringify(await weatherResponse.json()), /模拟|非实时/);
 for (const demo of ["robot-assistant", "contoso-outdoor"]) {
   const response = await fetch(`${base}/api/hub/status?demo=${demo}`);
   assert.equal(response.status, 200);

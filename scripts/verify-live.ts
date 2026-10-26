@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { toolDefinitions, type ToolName } from "../lib/robot/tools";
+import { robotMcpToolDefinitions, type ToolName } from "../lib/robot/tools";
 import { sseParser } from "../lib/sse";
 process.loadEnvFile(".env.local");
 const base = process.env.SITE_ORIGIN!;
@@ -37,8 +37,8 @@ await client.connect(
 );
 try {
   const listed = await client.listTools();
-  assert.equal(listed.tools.length, 7);
-  for (const name of Object.keys(toolDefinitions) as ToolName[]) {
+  assert.equal(listed.tools.length, 6);
+  for (const name of Object.keys(robotMcpToolDefinitions) as ToolName[]) {
     const response = await fetch(
       `${base}/api/tools/${name}?${new URLSearchParams(input[name])}`,
       { headers: toolHeaders },
@@ -56,7 +56,10 @@ try {
 } finally {
   await client.close();
 }
-console.log("HTTP/MCP parity: all 7 tools verified.");
+console.log("Business MCP: all 6 tools verified; weather remains HTTP.");
+const weatherResponse = await fetch(`${base}/api/tools/get_weather?city=杭州`, { headers: toolHeaders });
+assert.equal(weatherResponse.status, 200);
+assert.match(JSON.stringify(await weatherResponse.json()), /模拟|非实时/);
 let cookie = "";
 async function request(path: string, options: RequestInit = {}) {
   const response = await fetch(base + path, {

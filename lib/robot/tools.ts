@@ -95,6 +95,13 @@ export const toolDefinitions = {
     }),
   },
 } as const;
+// Weather remains an independently configured HTTP Tool. Business capabilities
+// are discovered through MCP; neither transport grants access to the other set.
+export const { get_weather: weatherToolDefinition, ...robotMcpToolDefinitions } = toolDefinitions;
+export function executeMcpTool(name: string, input: unknown) {
+  if (!Object.hasOwn(robotMcpToolDefinitions, name)) throw new Error("unknown_tool");
+  return executeTool(name, input);
+}
 export type ToolName = keyof typeof toolDefinitions;
 export function executeTool(name: string, input: unknown) {
   if (!Object.hasOwn(toolDefinitions, name)) throw new Error("unknown_tool");

@@ -1,5 +1,6 @@
 // Explicit deployment operation. Retargets cloned Demo resources through the
 // platform's normal draft, test, publish and MCP discovery APIs.
+import { migrateRobotMcp } from "./migrate-robot-mcp";
 import { platformAdmin } from "./platform-admin";
 
 if (!process.argv.includes("--apply"))
@@ -29,7 +30,7 @@ const samples: Record<string, Record<string, unknown>> = {
 const groups = [
   {
     agentId: Number(process.env.AGENT_STUDIO_AGENT_ID ?? 5),
-    keys: Object.keys(samples).filter((key) => !key.startsWith("contoso_")),
+    keys: ["get_weather"],
     path: (key: string) => `/api/tools/${key}`,
   },
   {
@@ -106,7 +107,7 @@ for (const group of groups) {
 
 const { servers } = await api("/external-tools/mcp");
 for (const [key, path, count] of [
-  ["demo_hub_robot", "/api/mcp", 7],
+  ["demo_hub_robot", "/api/mcp", 6],
   ["demo_hub_contoso", "/api/contoso/mcp", 6],
 ] as const) {
   const server = servers.find((item: any) => item.key === key);
@@ -129,3 +130,5 @@ for (const [key, path, count] of [
     throw new Error(`MCP ${key} discovery did not return ${count} tools`);
   console.log(`Discovered ${key} version ${discovered.id}: ${count} tools`);
 }
+
+await migrateRobotMcp(api, Number(process.env.AGENT_STUDIO_AGENT_ID ?? 5), true);

@@ -143,7 +143,11 @@ Showcase 采用前后端一体的轻量化架构，重点解决现代 AI 应用�
 * `GET /api/tools/get_user_location?user_id=1003`：查询所在城市
 * `GET /api/tools/get_weather?city=杭州`：获取指定城市的模拟天气状况
 * `GET /api/tools/fetch_external_data?user_id=1003&month=2025-12`：拉取指定月份清洁与耗材记录
-* `POST /api/mcp`：以 Streamable HTTP 协议暴露上述工具集供 MCP 客户端直接发现和挂载
+* `POST /api/mcp`：以 Streamable HTTP 暴露 6 个业务工具：模拟家庭列表、身份、城市、当前月份、清洁记录和报告约定；不注册或执行天气查询。
+
+Agent 中的机器人业务能力统一绑定 MCP 版本，天气仅绑定独立的 `get_weather` HTTP mock Tool。业务 HTTP 端点继续兼容旧客户端，但不再作为机器人 Agent 的活动业务 Tool 配置。工具名保持稳定，历史 HTTP 版本保留以便追溯。
+
+显式迁移脚本为 `scripts/migrate-robot-mcp.ts`。提供 `AGENT_STUDIO_ADMIN_URL`、`AGENT_STUDIO_ADMIN_TOKEN`、`AGENT_STUDIO_WORKSPACE_ID` 和 `AGENT_STUDIO_AGENT_ID`，先运行不带参数的计划，再传 `--apply` 执行。也可用 `AGENT_STUDIO_ADMIN_SESSION_FILE` 指定操作员会话文件，替代 URL/Token 环境变量。脚本不自动加载环境文件，不启用应用或扩大 Origin，不修改模型/Prompt，不调用真实模型。
 
 ### 户外装备顾问端点
 * `GET /api/contoso/tools/search_products`：多维度搜索户外装备目录

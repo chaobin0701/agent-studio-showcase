@@ -1,7 +1,8 @@
 // Explicit local operator action. No admin credentials are saved by this script.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
-import { toolDefinitions, type ToolName } from "../lib/robot/tools";
+import { mcpToolConfig } from "./migrate-robot-mcp";
+import { toolDefinitions, robotMcpToolDefinitions, type ToolName } from "../lib/robot/tools";
 
 process.loadEnvFile(".env.local");
 const password = process.env.DEMO_ADMIN_PASSWORD;
@@ -100,7 +101,7 @@ const testInputs: Record<ToolName, unknown> = {
   fetch_external_data: { user_id: "1001", month: "2025-12" },
   fill_context_for_report: {},
 };
-for (const name of Object.keys(toolDefinitions) as ToolName[]) {
+for (const name of ["get_weather"] as ToolName[]) {
   const definition = toolDefinitions[name];
   const resource = existing.resources.find(
     (item: { key: string; kind: string }) =>
@@ -164,10 +165,10 @@ if (!state.mcpServerId) {
   ).id;
   save();
 }
-if (!state.mcpVersionId) {
+{
   const detail = await api(`/external-tools/mcp/${state.mcpServerId}`);
   const version = detail.versions[0];
-  if (version.catalog?.length === 7) {
+  if (version.catalog?.length === 6 && !version.catalog.some((tool: any) => tool.name === "get_weather")) {
     state.mcpVersionId = version.id;
     save();
   } else {
@@ -176,12 +177,35 @@ if (!state.mcpVersionId) {
       "POST",
       { versionId: version.id },
     );
-    if (!discovery.ok || discovery.toolCount !== 7)
+    if (!discovery.ok || discovery.toolCount !== 6)
       throw new Error(`MCP discovery failed: ${JSON.stringify(discovery)}`);
     state.mcpVersionId = discovery.id;
     save();
-    console.log("MCP discovered: 7 tools.");
+    console.log("MCP discovered: 6 business tools.");
   }
+}
+const mcpToolIds: number[] = [];
+const mcpDetail = await api(`/external-tools/mcp/${state.mcpServerId}`);
+const catalog = mcpDetail.versions.find((version: any) => version.id === state.mcpVersionId).catalog;
+for (const name of Object.keys(robotMcpToolDefinitions)) {
+  const definition = catalog.find((tool: any) => tool.name === name);
+  const resource = existing.resources.find((item: any) => item.kind === "tool" && item.key === name);
+  const desired = mcpToolConfig(definition, state.mcpVersionId, { timeoutMs: 15000, readOnly: true, requiresApproval: false });
+  let ids: any;
+  if (!resource) ids = await api("/agent-resources", "POST", { kind: "tool", key: name, name: `Robot Lab · ${name}`, config: desired });
+  else {
+    const detail = await api(`/agent-resources/${resource.id}`);
+    const ready = detail.versions.find((version: any) => version.status === "published" && version.config.type === "mcp" && version.config.mcpVersionId === state.mcpVersionId);
+    if (ready) { mcpToolIds.push(ready.id); continue; }
+    ids = await api(`/agent-resources/tools/${resource.id}/draft`, "POST", {});
+  }
+  const detail = await api(`/agent-resources/${ids.resourceId}`);
+  const version = detail.versions.find((item: any) => item.id === ids.versionId);
+  await api(`/agent-resources/versions/${version.id}`, "PATCH", { revision: version.revision, config: desired });
+  const tested = await api(`/agent-resources/versions/${version.id}/test`, "POST", { input: testInputs[name as ToolName], execute: true });
+  if (!tested.ok) throw new Error(`MCP tool test failed: ${name}`);
+  await api(`/agent-resources/versions/${version.id}/publish`, "POST", {});
+  mcpToolIds.push(version.id);
 }
 const template = readFileSync("docs/robot-agent-prompt.txt", "utf8");
 if (!state.promptVersionId) {
@@ -235,9 +259,7 @@ if (!state.agentVersionId) {
   const config = {
     ...version.config,
     promptVersionId: state.promptVersionId,
-    toolVersionIds: Object.values(state.tools).map(
-      (item: any) => item.versionId,
-    ),
+    toolVersionIds: [state.tools.get_weather.versionId, ...mcpToolIds],
     responsibility: "扫地机器人知识咨询、模拟家庭使用报告与天气环境建议",
     runtime: { ...version.config.runtime, maxToolCalls: 12 },
     welcome: {
