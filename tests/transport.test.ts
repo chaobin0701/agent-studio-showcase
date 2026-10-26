@@ -21,6 +21,7 @@ import {
   sendMessage,
   recoverRequest,
   history,
+  conversationConfigurations,
 } from "../lib/server/agent-studio";
 
 test("thread ownership, Demo routing, native streaming and idempotent first-turn replay", async (t) => {
@@ -39,6 +40,13 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
     finishDelayed = resolve;
   });
   const server = createServer(async (request, response) => {
+    if (request.method === "GET" && request.url?.includes('/configurations?')) {
+      assert.equal(request.headers.authorization, 'Bearer test-only-key');
+      historyUsers.push(new URL(request.url, 'http://localhost').searchParams.get('userId')!);
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({turns:[{id:'recorded',number:1,status:'completed',snapshot:{agent:{name:'助手',version:'v3'},tools:[],skills:[{name:'故障排查',version:'v1'}],mcp:[],knowledge:[]}}]}));
+      return;
+    }
     if (request.method === "GET") {
       historyUsers.push(
         new URL(request.url!, "http://localhost").searchParams.get("userId")!,
@@ -169,6 +177,12 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
     platformUser(combined.find((item) => item.id === first.id)!),
     "hub:visitor-a:robot-report:1003",
   );
+  const recorded = await conversationConfigurations(thread("visitor-a", first.id));
+  assert.equal(recorded.turns[0].snapshot.agent.version, "v3");
+  assert.equal(recorded.turns[0].snapshot.skills[0].version, "v1");
+  assert.equal(historyUsers.at(-1), platformUser(first));
+  const empty = createThread("visitor-a", "robot-assistant", "1001", "2025-12");
+  assert.deepEqual(await conversationConfigurations(empty), {turns:[]});
   process.env.AGENT_STUDIO_CONTOSO_API_KEY = "contoso-test-key";
   process.env.AGENT_STUDIO_CONTOSO_AGENT_ID = "77";
   const retail = createThread(

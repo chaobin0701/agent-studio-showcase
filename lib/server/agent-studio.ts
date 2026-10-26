@@ -95,6 +95,12 @@ export async function agentRequest(
   }
   return response;
 }
+export async function conversationConfigurations(thread: Thread) {
+  if (!thread.upstream_id) return { turns: [] };
+  const query = new URLSearchParams({ userId: platformUser(thread) });
+  return (await agentRequest(`/v1/agent/conversations/${thread.upstream_id}/configurations?${query}`, {}, thread.demo)).json();
+}
+
 export async function history(thread: Thread) {
   const active = pending(thread.id);
   if (!thread.upstream_id) return { messages: [], pending: active ?? null, uiReceipts: uiReceipts(thread.id) };

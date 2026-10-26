@@ -1,7 +1,7 @@
 "use client";
 
 // Zola's prompt-kit conversation, composer and message components, with a custom Agent Studio transport.
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -20,6 +20,9 @@ import {
   PanelLeftClose,
   Plus,
   RefreshCw,
+  SlidersHorizontal,
+
+  Info,
   Square,
   Trash2,
   X,
@@ -62,6 +65,11 @@ import { readUiBlocks, upsertUiBlock, type UiBlock } from "@/lib/generative-ui/b
 import { ChatInteraction, InteractionRecord } from "@/components/chat-interaction";
 import type { ChatInteraction as Interaction, ChatInteractionResponse } from "@/lib/interactions";
 
+import { ShowcaseInfoPanel } from "@/components/conversation-info/quota-panel";
+import { quotaNotice } from "@/lib/conversation-info/quota";
+import type { SharedQuota, ConfigurationTurn } from "@/lib/conversation-info/types";
+import infoStyles from "@/components/conversation-info/conversation-info.module.css";
+
 type ChatMessage = {
   id: string;
   role: string;
@@ -89,14 +97,7 @@ type ChatMessage = {
     includesDraft: false;
   };
 };
-type ChatQuota = {
-  scope: "application-shared";
-  resetAt: string;
-  timezone: string;
-  checkedAt: string;
-  requests?: { limit: number; used: number; remaining: number };
-  tokens?: { limit: number; used: number; reserved: number; remaining: number; unsettled: boolean };
-};
+type ChatQuota = SharedQuota;
 type PublicProgress = {
   id?: string;
   stage?: string;
@@ -189,6 +190,48 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
   const [connected, setConnected] = useState<boolean | null>(null);
   const [quota, setQuota] = useState<ChatQuota | null>(null);
+  const [showcaseInfoOpen, setShowcaseInfoOpen] = useState(false);
+  const [showcaseInfoRoomy, setShowcaseInfoRoomy] = useState(false);
+  const [quotaNoticeDismissed, setQuotaNoticeDismissed] = useState(false);
+  const [quotaNoticePreferenceLoaded, setQuotaNoticePreferenceLoaded] = useState(false);
+  const showcaseInfoAutoOpened = useRef(false);
+  const showcaseInfoClosed = useRef(false);
+  const chatMain = useRef<HTMLElement>(null);
+  const [configurationTurns, setConfigurationTurns] = useState<ConfigurationTurn[]>([]);
+  const [configurationError, setConfigurationError] = useState("");
+  const showcaseInfoTrigger = useRef<HTMLButtonElement>(null);
+  const closeShowcaseInfo = useCallback(() => { showcaseInfoClosed.current = true; setShowcaseInfoOpen(false); showcaseInfoTrigger.current?.focus(); }, []);
+  const visibleQuota = quota;
+  const sharedQuotaNotice = visibleQuota ? quotaNotice(visibleQuota) : undefined;
+  const hasStarted = messages.some(message => message.role === "user");
+  const quotaBlocked = sharedQuotaNotice?.blocked ?? false;
+  useEffect(() => {
+    try { setQuotaNoticeDismissed(localStorage.getItem("showcase:shared-quota-notice:dismissed") === "1"); }
+    catch { /* Storage can be unavailable in private or restricted browsers. */ }
+    setQuotaNoticePreferenceLoaded(true);
+  }, []);
+  function dismissQuotaNotice() {
+    setQuotaNoticeDismissed(true);
+    try { localStorage.setItem("showcase:shared-quota-notice:dismissed", "1"); }
+    catch { /* Keep the dismissal for this page when storage is unavailable. */ }
+  }
+  useEffect(() => {
+    if (!hasStarted) return;
+    const desktop = window.matchMedia("(min-width: 1440px) and (hover: hover) and (pointer: fine)");
+    const openWhenRoomy = () => {
+      const roomy = desktop.matches && (chatMain.current?.clientWidth ?? 0) >= 1160;
+      setShowcaseInfoRoomy(roomy);
+      if (roomy && !showcaseInfoClosed.current && !showcaseInfoAutoOpened.current) {
+        showcaseInfoAutoOpened.current = true;
+        setShowcaseInfoOpen(true);
+      }
+    };
+    const observer = new ResizeObserver(openWhenRoomy);
+    if (chatMain.current) observer.observe(chatMain.current);
+    desktop.addEventListener("change", openWhenRoomy);
+    openWhenRoomy();
+    return () => { observer.disconnect(); desktop.removeEventListener("change", openWhenRoomy); };
+  }, [hasStarted]);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
   const [copied, setCopied] = useState("");
@@ -215,9 +258,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   const followUps = completedAssistant ? suggestedFollowUps(completedAssistant.structured) : [];
   const outgoingText = input.trim() || followUps[0] || "";
   function formatTokens(value: number) { return new Intl.NumberFormat("zh-CN").format(value); }
-  function resetTime(value: ChatQuota) {
-    return new Intl.DateTimeFormat("zh-CN", { timeZone: value.timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value.resetAt));
-  }
+
   function showProfile(event: MouseEvent<HTMLButtonElement>) {
     inspectorTrigger.current = event.currentTarget;
     if (window.innerWidth < 768) setSidebar(false);
@@ -266,6 +307,20 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     setThreadList(data.threads);
     return data.threads as Thread[];
   }
+  async function refreshConfiguration(id: string) {
+    const version = generation.current;
+    try {
+      const data = await readJson(await fetch(`/api/hub/threads/${id}/configurations`, { cache: "no-store" }));
+      if (generation.current !== version) return;
+      setConfigurationTurns(data.turns);
+      setConfigurationError("");
+    } catch (error) { if (generation.current === version) setConfigurationError(error instanceof Error ? error.message : "配置读取失败"); }
+  }
+  useEffect(() => {
+    if (!showcaseInfoOpen || !current) return;
+    void refreshConfiguration(current.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showcaseInfoOpen, current?.id]);
   async function refreshStatus() {
     const data = await readJson(await fetch(`/api/hub/status?demo=${demo.slug}`, { cache: "no-store" }));
     setConnected(data.connected);
@@ -286,6 +341,9 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
         uiBlocks: readUiBlocks(message.uiBlocks),
         ...(message.role === "assistant" && !message.status ? { status: "completed" } : {}),
       }));
+      setShowcaseInfoOpen(false);
+      setConfigurationTurns([]);
+      void refreshConfiguration(id);
       setCurrent(data.thread);
       setPersona(data.thread.persona);
       setMonth(data.thread.month);
@@ -307,6 +365,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     setSidebar(window.innerWidth >= 768);
     let disposed = false;
     refreshStatus().catch(() => { if (!disposed) { setConnected(false); setQuota(null); } });
+    const quotaTimer = window.setInterval(() => { if (document.visibilityState === "visible") void refreshStatus().catch(() => {}); }, 15000);
     const onFocus = () => { if (document.visibilityState === "visible") void refreshStatus().catch(() => {}); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
@@ -319,6 +378,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
       });
     return () => {
       disposed = true;
+      window.clearInterval(quotaTimer);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
       generation.current++;
@@ -330,6 +390,9 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   function newThread(nextPersona = persona, nextMonth = month) {
     generation.current++;
     setLoading(false);
+    setShowcaseInfoOpen(false);
+    setConfigurationTurns([]);
+    setConfigurationError("");
     setCurrent(null);
     setMessages([]);
     setUiReceipts([]);
@@ -499,7 +562,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   }
   async function send(text?: string, uiSubmission?: UiSubmission) {
     const message = (text ?? (input.trim() ? input : followUps[0] ?? "")).trim();
-    if (message.length < 2 || inFlight.current || busy || pending || loading || connected !== true) {
+    if (message.length < 2 || inFlight.current || busy || pending || loading || connected !== true || quotaBlocked) {
       if (uiSubmission) throw new Error("当前无法提交，请先确认会话状态");
       return;
     }
@@ -549,6 +612,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
       }
       if (!response.body) throw new Error("连接没有返回内容");
       await receive(response, assistantId);
+      void refreshConfiguration(item.id);
       if (uiSubmission) setUiReceipts(previous => [...previous.filter(value => receiptKey(value) !== receiptKey(uiSubmission)), { ...uiSubmission, state: "completed" }]);
     } catch (error) {
       setPending(true);
@@ -742,7 +806,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
             </button>
           </div>
         </aside>
-        <main className="chat-main">
+        <main ref={chatMain} className={`chat-main ${hasStarted && showcaseInfoOpen && showcaseInfoRoomy ? infoStyles.infoRailOpen : ""}`}>
           <header className="chat-topbar">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {!sidebar && (
@@ -767,6 +831,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-3">
+              {hasStarted && <button type="button" ref={showcaseInfoTrigger} data-showcase-info-trigger className="icon-button" aria-label="查看展示站信息" aria-controls="showcase-information" aria-expanded={showcaseInfoOpen} onClick={() => showcaseInfoOpen ? closeShowcaseInfo() : setShowcaseInfoOpen(true)}><SlidersHorizontal size={17} /></button>}
               <span className="hidden items-center gap-1.5 text-[10px] text-[#a0a6b2] sm:flex">
                 <span
                   className={`size-1.5 rounded-full ${connected ? "bg-[#77bba5]" : "bg-[#c9cdd5]"}`}
@@ -814,7 +879,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                   <SuggestedQuestions
                     key={demo.slug}
                     demo={demo.slug}
-                    disabled={busy || connected !== true}
+                    disabled={busy || connected !== true || quotaBlocked}
                     onSelect={setInput}
                   />
                 </div>
@@ -844,7 +909,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                           (busy ? "正在查询…" : "本轮没有完整回答。")}
                       </MessageContent>}
                       {message.role === "assistant" && !!message.uiBlocks?.length && <GenerativeUiBlocks blocks={message.uiBlocks}
-                        disabled={busy || pending || loading || connected !== true || message.status !== "completed" || message.incomplete || message.refused}
+                        disabled={busy || pending || loading || connected !== true || quotaBlocked || message.status !== "completed" || message.incomplete || message.refused}
                         receipts={uiReceipts}
                         onSubmit={async submission => {
                           const block = message.uiBlocks?.find(item => item.blockId === submission.blockId && item.revision === submission.revision);
@@ -986,6 +1051,13 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               </button>
             )}
             {waiting && !busy && <p role="status" className="mb-3 px-2 text-sm leading-6 text-[#52627c]">正在等待你的回应，请在对话卡片中选择或填写。</p>}
+            {sharedQuotaNotice && (visibleQuota?.requests || visibleQuota?.tokens || visibleQuota?.minute) && (sharedQuotaNotice.level !== "neutral" || (quotaNoticePreferenceLoaded && !quotaNoticeDismissed)) && <div className={`${infoStyles.composerNotice} ${infoStyles[sharedQuotaNotice.level]}`} role={quotaBlocked ? "alert" : "status"}>
+              <Info size={14} /><span><strong>{sharedQuotaNotice.title}</strong>{sharedQuotaNotice.level !== "neutral" && <small>{sharedQuotaNotice.detail}</small>}</span>
+              <div className={infoStyles.noticeActions}>
+                {hasStarted && <button type="button" onClick={() => setShowcaseInfoOpen(true)}>查看额度</button>}
+                {sharedQuotaNotice.level === "neutral" && <button type="button" className={infoStyles.noticeDismiss} aria-label="关闭共享额度提醒" onClick={dismissQuotaNotice}><X size={14} /></button>}
+              </div>
+            </div>}
             <PromptInput
               value={input}
               onValueChange={setInput}
@@ -1051,17 +1123,8 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                       {contextUsage ? (
                         <span>模型窗口 {formatTokens(contextUsage.contextWindowTokens)} Token · 剩余 {formatTokens(contextUsage.remainingInputTokens)} Token</span>
                       ) : <span>尚无本次调用测量，占用比例未知。</span>}
-                      {(quota?.requests || quota?.tokens) && (
-                        <>
-                          <strong>应用共享额度</strong>
-                          <span>{quota.requests ? `今日剩余 ${formatTokens(quota.requests.remaining)} 次` : `今日剩余 ${formatTokens(quota.tokens!.remaining)} Token`}</span>
-                          <span>重置于 {resetTime(quota)}（{quota.timezone}）</span>
-                          {quota.tokens?.unsettled && <span>部分调用尚未结算，预留消耗已计入剩余量。</span>}
-                        </>
-                      )}
                     </div>
                   </div>
-                  {quota?.requests && <span className="context-quota-label">今日剩余 {formatTokens(quota.requests.remaining)} 次</span>}
                 </div>
                 <PromptInputAction
                   tooltip={busy ? "停止接收（助手可能仍在执行）" : waiting ? "请先回应对话卡片" : !input.trim() && followUps.length > 0 ? "发送这条推荐追问" : "发送消息"}
@@ -1074,7 +1137,8 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                       (outgoingText.length < 2 ||
                         pending ||
                         loading ||
-                        connected !== true)
+                        connected !== true ||
+                        quotaBlocked)
                     }
                     onClick={() =>
                       busy ? abort.current?.abort() : void send()
@@ -1090,6 +1154,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               </PromptInputActions>
             </PromptInput>
           </div>
+          {hasStarted && showcaseInfoOpen && <ShowcaseInfoPanel quota={visibleQuota} turns={configurationTurns} configurationError={configurationError} contextWindowTokens={contextUsage?.contextWindowTokens} onClose={closeShowcaseInfo} />}
         </main>
         {inspector && (
           <aside ref={inspectorRef} id="chat-profile-panel" className="chat-inspector" aria-label="角色与模拟资料" tabIndex={-1}

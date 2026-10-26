@@ -5,6 +5,7 @@ import { validDemoContext } from "@/lib/demo-profiles";
 import { contosoSnapshot, getCustomer } from "@/lib/contoso/service";
 import {
   chatStatus,
+  conversationConfigurations,
   agentRequest,
   history,
   platformUser,
@@ -49,6 +50,9 @@ export async function GET(request: Request, context: Context) {
       return Response.json({
         threads: threads(owner, demo).map(({ owner: _, ...item }) => item),
       });
+    }
+    if (path[0] === "threads" && path.length === 3 && path[2] === "configurations") {
+      return Response.json(await conversationConfigurations(thread(owner, path[1])));
     }
     if (path[0] === "threads" && path.length === 2) {
       const item = thread(owner, path[1]);
