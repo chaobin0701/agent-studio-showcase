@@ -51,11 +51,13 @@ export function RobotData({
   };
   return (
     <div>
-      <p className="section-kicker mb-3">DEMO DATA</p>
-      <h2 className="text-lg font-semibold">认识这个模拟家庭</h2>
-      <p className="mt-2 mb-5 text-xs leading-6 text-waterloo">
-        查看角色的城市、家庭情况与清洁记录，也可以切换角色和月份。
-      </p>
+      {!compact && <>
+        <p className="section-kicker mb-3">DEMO DATA</p>
+        <h2 className="text-lg font-semibold">认识这个模拟家庭</h2>
+        <p className="mt-2 mb-5 text-xs leading-6 text-waterloo">
+          查看角色的城市、家庭情况与清洁记录，也可以切换角色和月份。
+        </p>
+      </>}
       <div className="flex flex-wrap gap-2">
         <select
           disabled={disabled}

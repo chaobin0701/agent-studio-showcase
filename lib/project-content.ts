@@ -21,7 +21,7 @@ export const robotTools = [
   ["list_demo_users", "列出公开的模拟家庭。"],
   ["get_user_id", "确认页面选定的模拟角色。"],
   ["get_user_location", "查询该角色的模拟城市。"],
-  ["get_current_month", "确认选中的示例月份。"],
+  ["get_current_month", "读取当前月份与可用示例月份。"],
   ["get_weather", "查询固定天气样本。"],
   ["fetch_external_data", "读取家庭清洁使用记录。"],
   ["fill_context_for_report", "提供清洁报告需要的栏目与上下文。"],

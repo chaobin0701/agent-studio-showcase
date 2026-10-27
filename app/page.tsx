@@ -16,7 +16,7 @@ export default function Home() {
         <DemoList />
       </section>
       <section className="home-platform-bridge"><div className="site-container home-platform-bridge-inner">
-        <div><p className="section-kicker">技术实现</p><h2>这些应用如何由 Agent Studio 构建？</h2><p>查看执行链、发布快照、知识检索与工具接入的实现方式。</p></div>
+        <div><p className="section-kicker">技术实现</p><h2>Agent Studio 如何构建和运行 Agent？</h2><p>了解平台如何管理 Agent 配置与版本快照，并编排模型、知识检索、Tools 和 MCP 完成请求。</p></div>
         <Link href="/platform" className="secondary-button">平台技术实现 <ArrowUpRight size={17} /></Link>
       </div></section>
     </SiteShell>

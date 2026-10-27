@@ -41,11 +41,13 @@ export function ContosoData({
   }, [selected]);
   return (
     <div>
-      <p className="section-kicker mb-3">户外装备 · 模拟资料</p>
-      <h2 className="text-lg font-semibold">装备与模拟购买记录</h2>
-      <p className="mt-2 mb-5 text-xs leading-6 text-waterloo">
-        选择一位虚构客户，看看已有装备；价格为人民币模拟价格。
-      </p>
+      {!compact && <>
+        <p className="section-kicker mb-3">户外装备 · 模拟资料</p>
+        <h2 className="text-lg font-semibold">装备与模拟购买记录</h2>
+        <p className="mt-2 mb-5 text-xs leading-6 text-waterloo">
+          选择一位虚构客户，看看已有装备；价格为人民币模拟价格。
+        </p>
+      </>}
       <select
         aria-label="模拟客户"
         value={selected}

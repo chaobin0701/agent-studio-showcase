@@ -12,7 +12,6 @@ import {
   Check,
   ChevronDown,
   Copy,
-  Database,
   Github,
   Loader2,
   Menu,
@@ -191,7 +190,6 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [quota, setQuota] = useState<ChatQuota | null>(null);
   const [showcaseInfoOpen, setShowcaseInfoOpen] = useState(false);
-  const [showcaseInfoRoomy, setShowcaseInfoRoomy] = useState(false);
   const [quotaNoticeDismissed, setQuotaNoticeDismissed] = useState(false);
   const [quotaNoticePreferenceLoaded, setQuotaNoticePreferenceLoaded] = useState(false);
   const showcaseInfoAutoOpened = useRef(false);
@@ -220,7 +218,6 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
     const desktop = window.matchMedia("(min-width: 1440px) and (hover: hover) and (pointer: fine)");
     const openWhenRoomy = () => {
       const roomy = desktop.matches && (chatMain.current?.clientWidth ?? 0) >= 1160;
-      setShowcaseInfoRoomy(roomy);
       if (roomy && !showcaseInfoClosed.current && !showcaseInfoAutoOpened.current) {
         showcaseInfoAutoOpened.current = true;
         setShowcaseInfoOpen(true);
@@ -789,24 +786,9 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               <ArrowLeft size={13} />
               查看应用详情
             </Link>
-            <button type="button" className="chat-profile-trigger mt-4 flex min-h-12 w-full items-center gap-2 rounded-xl px-2 text-left"
-              aria-label={`查看或切换角色：${profile.name}`} aria-controls="chat-profile-panel" aria-expanded={inspector}
-              onClick={showProfile}>
-              <span
-                className="grid size-7 place-items-center rounded-full text-[10px]"
-                style={{ background: profile.avatar }}
-              >
-                {profile.name[0]}
-              </span>
-              <span className="text-xs">{profile.name}</span>
-              <span className="ml-auto text-[10px] text-[#8c94a3]">
-                模拟用户
-              </span>
-              <ChevronDown size={13} className="shrink-0 text-[#9aa2af]" aria-hidden="true" />
-            </button>
           </div>
         </aside>
-        <main ref={chatMain} className={`chat-main ${hasStarted && showcaseInfoOpen && showcaseInfoRoomy ? infoStyles.infoRailOpen : ""}`}>
+        <main ref={chatMain} className="chat-main">
           <header className="chat-topbar">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {!sidebar && (
@@ -821,8 +803,8 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               <div className="min-w-0 flex-1">
                 <h1 className="truncate text-sm font-medium">{demo.name}</h1>
                 <button type="button" className="chat-profile-trigger -ml-1 mt-0.5 flex min-h-7 w-max max-w-full items-center gap-1 rounded-md px-1 text-[10px] text-[#8b93a1]"
-                  aria-label={`查看或切换角色：${profile.name}`} aria-controls="chat-profile-panel" aria-expanded={inspector}
-                  onClick={showProfile}>
+                  aria-label={`查看或切换模拟资料：${profile.name}，${contextLabel}`} aria-controls="chat-profile-panel" aria-expanded={inspector}
+                  onClick={(event) => inspector ? closeInspector() : showProfile(event)}>
                   <span className="truncate">
                   {profile.name} · {contextLabel}
                   </span>
@@ -842,14 +824,6 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
                     ? "已连接"
                     : "未连接"}
               </span>
-              <button
-                className="icon-button"
-                aria-label="查看模拟数据"
-                aria-controls="chat-profile-panel" aria-expanded={inspector}
-                onClick={(event) => inspector ? closeInspector() : showProfile(event)}
-              >
-                <Database size={17} />
-              </button>
               <a className="icon-button" href="https://github.com/chaobin0701/agent-studio" target="_blank" rel="noopener noreferrer" aria-label="查看 Agent Studio GitHub 仓库">
                 <Github size={17} aria-hidden="true" />
               </a>
@@ -1051,7 +1025,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               </button>
             )}
             {waiting && !busy && <p role="status" className="mb-3 px-2 text-sm leading-6 text-[#52627c]">正在等待你的回应，请在对话卡片中选择或填写。</p>}
-            {sharedQuotaNotice && (visibleQuota?.requests || visibleQuota?.tokens || visibleQuota?.minute) && (sharedQuotaNotice.level !== "neutral" || (quotaNoticePreferenceLoaded && !quotaNoticeDismissed)) && <div className={`${infoStyles.composerNotice} ${infoStyles[sharedQuotaNotice.level]}`} role={quotaBlocked ? "alert" : "status"}>
+            {sharedQuotaNotice && (visibleQuota?.requests || visibleQuota?.tokens || visibleQuota?.minute) && (sharedQuotaNotice.level !== "neutral" || (hasStarted && quotaNoticePreferenceLoaded && !quotaNoticeDismissed)) && <div className={`${infoStyles.composerNotice} ${infoStyles[sharedQuotaNotice.level]}`} role={quotaBlocked ? "alert" : "status"}>
               <Info size={14} /><span><strong>{sharedQuotaNotice.title}</strong>{sharedQuotaNotice.level !== "neutral" && <small>{sharedQuotaNotice.detail}</small>}</span>
               <div className={infoStyles.noticeActions}>
                 {hasStarted && <button type="button" onClick={() => setShowcaseInfoOpen(true)}>查看额度</button>}
@@ -1162,7 +1136,7 @@ export function ChatWorkspace({ demo }: { demo: Demo }) {
               if (event.key === "Escape") { event.stopPropagation(); closeInspector(); }
             }}>
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-sm font-medium">角色与模拟资料</h2>
+              <h2 className="text-sm font-medium">模拟资料</h2>
               <button
                 className="icon-button"
                 aria-label="关闭数据面板"

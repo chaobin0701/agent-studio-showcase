@@ -1,18 +1,18 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { Activity, ArrowLeft, ArrowUpRight, Database, Play, Rocket, Settings2, SlidersHorizontal, Workflow } from "lucide-react";
 import { platformStack } from "@/lib/project-content";
 
 const architecture = [
-  ["接入与配置", "管理界面负责配置和发布 Agent、模型、Prompt、Skill、知识库与工具；聊天端和外部应用通过 API 使用已发布能力。"],
-  ["发布与执行", "NestJS 服务校验身份、工作区权限和预算，固定 Agent 与依赖版本；Deep Agents 组织模型推理、检索、工具调用和成员委派。"],
-  ["数据与外部能力", "PostgreSQL 保存资源、运行记录与检索索引，pg-boss Worker 异步处理文档；业务数据由独立服务经 HTTP Tool 或 MCP 提供。"],
+  ["接入与配置", "管理界面负责配置和发布 Agent、模型、Prompt、Skill、知识库与工具；聊天端和外部应用通过 API 使用已发布能力。", SlidersHorizontal],
+  ["发布与执行", "NestJS 服务校验身份、工作区权限和预算，固定 Agent 与依赖版本；Deep Agents 组织模型推理、检索、工具调用和成员委派。", Workflow],
+  ["数据与外部能力", "PostgreSQL 保存资源、运行记录与检索索引，pg-boss Worker 异步处理文档；业务数据由独立服务经 HTTP Tool 或 MCP 提供。", Database],
 ] as const;
 
 const lifecycle = [
-  ["配置", "在工作区组合模型方案、Prompt、Skill、知识库、工具和成员 Agent。"],
-  ["发布", "调试草稿并发布固定版本，形成包含依赖与授权的执行快照。"],
-  ["执行", "请求通过身份与预算检查后，Deep Agents 按任务选择检索、工具或成员 Agent。"],
-  ["追踪", "JSON 或 SSE 返回答案、引用与公开过程；Run、用量和调用记录可回查。"],
+  ["配置", "在工作区组合模型方案、Prompt、Skill、知识库、工具和成员 Agent。", Settings2],
+  ["发布", "调试草稿并发布固定版本，形成包含依赖与授权的执行快照。", Rocket],
+  ["执行", "请求通过身份与预算检查后，Deep Agents 按任务选择检索、工具或成员 Agent。", Play],
+  ["追踪", "JSON 或 SSE 返回答案、引用与公开过程；Run、用量和调用记录可回查。", Activity],
 ] as const;
 
 const highlights = [
@@ -38,11 +38,11 @@ export function PlatformSections() {
     <div className="site-container platform-page-content">
       <section className="platform-page-section" aria-labelledby="architecture-title">
         <div className="platform-section-intro"><h2 id="architecture-title">系统由哪些部分组成</h2><p>一套控制面、一套执行服务，加上独立的数据与外部能力接入。</p></div>
-        <dl className="platform-capability-rows">{architecture.map(([name, body]) => <div key={name}><dt>{name}</dt><dd>{body}</dd></div>)}</dl>
+        <dl className="platform-capability-rows">{architecture.map(([name, body, Icon]) => <div key={name}><dt><Icon className="platform-item-icon" size={20} strokeWidth={1.75} aria-hidden="true" focusable="false" />{name}</dt><dd>{body}</dd></div>)}</dl>
       </section>
       <section className="platform-page-section" aria-labelledby="workflow-title">
         <div className="platform-section-intro"><h2 id="workflow-title">一次请求的完整路径</h2><p>发布版本和授权在执行前固定，模型只使用本次任务允许的资源。</p></div>
-        <ol className="platform-timeline">{lifecycle.map(([name, body]) => <li key={name}><h3>{name}</h3><p>{body}</p></li>)}</ol>
+        <ol className="platform-timeline">{lifecycle.map(([name, body, Icon]) => <li key={name}><h3><Icon className="platform-item-icon" size={20} strokeWidth={1.75} aria-hidden="true" focusable="false" />{name}</h3><p>{body}</p></li>)}</ol>
       </section>
       <section className="platform-page-section" aria-labelledby="highlights-title">
         <div className="platform-section-intro"><h2 id="highlights-title">项目亮点</h2><p>从 README 提炼的核心能力，以及它们在平台中的实现方式。</p></div>

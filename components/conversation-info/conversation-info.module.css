@@ -110,7 +110,3 @@
 .composerNotice .noticeActions button { margin-left:0; }
 .composerNotice .noticeDismiss { display:grid; place-items:center; width:22px; height:22px; padding:0; border-radius:5px; text-decoration:none; }
 .composerNotice .noticeDismiss:hover { background:#6484b314; }
-@media(min-width:1440px) {
-  .infoRailOpen { padding-right:344px; }
-  .infoRailOpen>:global(.chat-topbar) { margin-right:-344px; }
-}

@@ -31,13 +31,11 @@ export default function Hero() {
         initial={reduced ? false : { opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: reduced ? 0 : 0.55 }}>
-        <p className="section-kicker mb-5">开源 Agent 平台</p>
         <h1>Agent Studio<span>.</span></h1>
         <h2>基于 LangChain 的通用 Agent 构建平台。</h2>
         <p className="studio-hero-description">以 Deep Agents / LangGraph 为执行核心，统一管理模型、Prompt、Skill、知识库与工具；发布后可通过聊天或 API 运行，并追踪每次执行。</p>
         <div className="studio-hero-actions">
           <Link href="/#demos" className="primary-button">体验应用 <ArrowRight size={16} /></Link>
-          <Link href="/platform" className="secondary-button">平台技术实现 <ArrowRight size={16} /></Link>
         </div>
       </motion.div>
       <motion.div className="studio-hero-media-motion"
