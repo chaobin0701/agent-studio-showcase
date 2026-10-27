@@ -23,6 +23,7 @@ import {
   history,
   conversationConfigurations,
 } from "../lib/server/agent-studio";
+import { publicText } from "../lib/public-text";
 
 test("thread ownership, Demo routing, native streaming and idempotent first-turn replay", async (t) => {
   const directory = mkdtempSync(join(tmpdir(), "agent-studio-showcase-test-"));
@@ -34,6 +35,15 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
     authorization?: string;
   }[] = [];
   const historyUsers: string[] = [];
+  let historyMessages: {
+    id: string;
+    role: string;
+    content: string;
+    structured?: unknown;
+    context?: unknown;
+  }[] = [
+    { id: "legacy-answer", role: "assistant", content: "旧会话内容", structured: { suggestedFollowUps: ["继续了解中文示例"] } },
+  ];
   const conversationId = randomUUID();
   let finishDelayed: (() => void) | undefined;
   const delayedFinished = new Promise<void>((resolve) => {
@@ -53,9 +63,7 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
       );
       response.writeHead(200, { "content-type": "application/json" });
       response.end(
-        JSON.stringify([
-          { id: "legacy-answer", role: "assistant", content: "旧会话内容", structured: { suggestedFollowUps: ["继续了解中文示例"] } },
-        ]),
+        JSON.stringify(request.url?.includes("/runs?") ? [] : historyMessages),
       );
       return;
     }
@@ -125,7 +133,11 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
     "first-turn replay must not add the new upstream conversation ID",
   );
   assert.match(String(received[0].body.userId), /visitor-a:robot-report:1003/);
-  assert.match(String(received[0].body.message), /模拟用户ID=1003/);
+  assert.equal(received[0].body.message, "请生成清洁报告");
+  assert.deepEqual(received[0].body.context, { data: {
+    demo: "robot-assistant", userId: "1003", userName: "周一鸣", month: "2025-12",
+  } });
+  assert.deepEqual(JSON.parse(savedRequest(requestId)!.body), received[0].body);
   await assert.rejects(
     sendMessage(restored, "换一个问题", requestId),
     /请求标识已用于其他内容/,
@@ -197,20 +209,69 @@ test("thread ownership, Demo routing, native streaming and idempotent first-turn
   const sent = received.at(-1)!;
   assert.equal(sent.url, "/v1/agent/77/messages");
   assert.equal(sent.authorization, "Bearer contoso-test-key");
-  assert.match(String(sent.body.message), /Contoso 模拟客户ID=1/);
-  assert.match(String(sent.body.message), /姓名=张晨/);
-  assert.match(String(sent.body.message), /金额币种=CNY/);
+  assert.equal(sent.body.message, "看看我的模拟订单");
+  assert.deepEqual(sent.body.context, { data: {
+    demo: "contoso-outdoor", customerId: "1", customerName: "张晨", year: 2023, currency: "CNY",
+  } });
+  assert.deepEqual(JSON.parse(savedRequest(sent.key)!.body), sent.body);
   assert.match(String(sent.body.userId), /visitor-a:contoso-outdoor:contoso-1/);
   assert.ok(
     !threads("visitor-a", "robot-assistant").some((t) => t.id === retail.id),
   );
-  const legacyRetail = createThread("visitor-a", "contoso-outdoor", "contoso-1", "2023");
-  const legacyRequestId = randomUUID();
-  const legacyMessage = "旧订单问题\n\n[公开演示资料：Contoso 模拟客户ID=1；姓名=John Smith；样例购买记录年份=2023；金额币种=USD。]";
-  beginRequest(legacyRetail.id, legacyRequestId, JSON.stringify({ userId: platformUser(legacyRetail), message: legacyMessage, stream: true }));
-  finishRequest(legacyRequestId, "unknown");
-  await recoverRequest(legacyRetail);
-  assert.equal(received.at(-1)!.key, legacyRequestId);
-  assert.equal(received.at(-1)!.body.message, legacyMessage, "Localization must not rewrite saved request bodies on recovery.");
-  assert.equal(received.at(-1)!.body.stream, false);
+  for (const fixture of [
+    {
+      demo: "robot-report", persona: "1001", period: "2025-06",
+      question: "旧清洁问题",
+      suffix: "模拟用户ID=1001；姓名=旧姓名；示例月份=2025-06。这些是待查询的数据标识，非真实身份或已核实的使用记录。",
+      data: { demo: "robot-assistant", userId: "1001", userName: "林小北", month: "2025-06" },
+    },
+    {
+      demo: "contoso-outdoor", persona: "contoso-1", period: "2023",
+      question: "旧订单问题",
+      suffix: "Contoso 模拟客户ID=1；姓名=John Smith；样例购买记录年份=2023；金额币种=USD。",
+      data: { demo: "contoso-outdoor", customerId: "1", customerName: "张晨", year: 2023, currency: "CNY" },
+    },
+  ]) {
+    const legacy = createThread("visitor-a", fixture.demo, fixture.persona, fixture.period);
+    const legacyRequestId = randomUUID();
+    const legacyMessage = `${fixture.question}\n\n[公开演示资料：${fixture.suffix}]`;
+    const originalBody = JSON.stringify({ userId: platformUser(legacy), message: legacyMessage, stream: true });
+    beginRequest(legacy.id, legacyRequestId, originalBody);
+    finishRequest(legacyRequestId, "unknown");
+
+    await recoverRequest(legacy);
+    assert.equal(received.at(-1)!.key, legacyRequestId);
+    assert.deepEqual(received.at(-1)!.body, { ...JSON.parse(originalBody), stream: false });
+    assert.equal(savedRequest(legacyRequestId)!.body, originalBody);
+
+    const reloaded = thread("visitor-a", legacy.id);
+    await (await sendMessage(reloaded, fixture.question, legacyRequestId)).text();
+    assert.equal(received.at(-1)!.key, legacyRequestId);
+    assert.deepEqual(received.at(-1)!.body, JSON.parse(originalBody), "Retry must retain the original legacy payload, including its old name and currency.");
+    await assert.rejects(sendMessage(reloaded, "更改的问题", legacyRequestId), /请求标识已用于其他内容/);
+
+    const nextQuestion = "继续查看我的模拟记录";
+    const nextId = randomUUID();
+    await (await sendMessage(reloaded, nextQuestion, nextId)).text();
+    const nextBody = received.at(-1)!.body;
+    assert.equal(nextBody.message, nextQuestion);
+    assert.equal(nextBody.conversationId, conversationId);
+    assert.deepEqual(nextBody.context, { data: fixture.data });
+    assert.deepEqual(JSON.parse(savedRequest(nextId)!.body), nextBody);
+    finishRequest(nextId, "unknown");
+    await recoverRequest(reloaded);
+    assert.deepEqual(received.at(-1)!.body, { ...nextBody, stream: false });
+    assert.deepEqual(JSON.parse(savedRequest(nextId)!.body), nextBody);
+
+    historyMessages = [
+      { id: "legacy-user", role: "user", content: legacyMessage },
+      { id: "new-user", role: "user", content: nextQuestion, context: nextBody.context },
+    ];
+    const refreshed = await history(reloaded);
+    assert.equal(refreshed.messages[0].content, legacyMessage, "History must not rewrite upstream messages.");
+    assert.equal(refreshed.messages[0].context, undefined);
+    assert.deepEqual(refreshed.messages[1].context, { data: fixture.data });
+    assert.deepEqual(refreshed.messages.map((item: { content: string }) => publicText(item.content)), [fixture.question, nextQuestion]);
+    assert.equal(savedRequest(legacyRequestId)!.body, originalBody);
+  }
 });

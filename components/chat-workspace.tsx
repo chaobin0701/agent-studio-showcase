@@ -57,6 +57,7 @@ import {
 import { ContosoData } from "@/components/contoso-data";
 import { suggestedFollowUps } from "@/lib/suggestions";
 import { sseParser } from "@/lib/sse";
+import { publicText } from "@/lib/public-text";
 import type { Thread } from "@/lib/server/store";
 import { submissionMessage, receiptKey, type UiSubmission, type UiReceipt } from "@/lib/generative-ui/actions";
 import { GenerativeUiBlocks } from "@/components/generative-ui";
@@ -164,10 +165,6 @@ async function readJson(response: Response) {
   if (!response.ok) throw new Error(data.error ?? "请求失败");
   return data;
 }
-function publicText(value: string) {
-  return value.replace(/\n\n\[公开演示资料：[\s\S]*\]$/, "");
-}
-
 export function ChatWorkspace({ demo }: { demo: Demo }) {
   const [sidebar, setSidebar] = useState(false);
   const [inspector, setInspector] = useState(false);

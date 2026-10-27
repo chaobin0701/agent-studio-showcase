@@ -13,6 +13,7 @@ import {
 import { sseParser } from "../sse";
 import { profileForDemo } from "../demo-profiles";
 import { canonicalDemoSlug } from "../catalog";
+import { publicText } from "../public-text";
 import { demoConnection } from "./connections";
 import {
   interactionResponseSchema,
@@ -195,23 +196,44 @@ export async function recoverRequest(thread: Thread) {
   );
   return { recovered: true };
 }
+type DemoContextData =
+  | { demo: "robot-assistant"; userId: string; userName: string; month: string }
+  | { demo: "contoso-outdoor"; customerId: string; customerName: string; year: number; currency: "CNY" };
+
+function demoContextData(thread: Thread): DemoContextData {
+  const profile = profileForDemo(thread.demo, thread.persona);
+  if (!profile) throw new HttpError(400, "无效的模拟背景");
+  return canonicalDemoSlug(thread.demo) === "contoso-outdoor"
+    ? {
+        demo: "contoso-outdoor",
+        customerId: thread.persona.replace(/^contoso-/, ""),
+        customerName: profile.name,
+        year: Number(thread.month),
+        currency: "CNY",
+      }
+    : {
+        demo: "robot-assistant",
+        userId: profile.id,
+        userName: profile.name,
+        month: thread.month,
+      };
+}
+
 export async function sendMessage(
   thread: Thread,
   message: string,
   requestId: string,
   submission?: UiSubmission,
 ) {
-  const profile = profileForDemo(thread.demo, thread.persona);
-  if (!profile) throw new HttpError(400, "无效的模拟背景");
-  const contextual =
-    canonicalDemoSlug(thread.demo) === "contoso-outdoor"
-      ? `${message}\n\n[公开演示资料：Contoso 模拟客户ID=${thread.persona.replace(/^contoso-/, "")}；姓名=${profile.name}；样例购买记录年份=2023；金额币种=CNY；采用中文名称及独立人民币模拟定价，2023 年记录金额已按该价重算。历史美元消息保留原币种，不当作当前人民币报价。客户为虚构样例，不是真实账户；请使用工具查询，不推测订单或会员权益。]`
-      : `${message}\n\n[公开演示资料：模拟用户ID=${profile.id}；姓名=${profile.name}；示例月份=${thread.month}。这些是待查询的数据标识，非真实身份或已核实的使用记录。]`;
   const saved = savedRequest(requestId);
+  const savedBody = saved ? JSON.parse(saved.body) : undefined;
+  // Legacy requests appended profile data to the question. Match the original
+  // question for retries, but always send the saved body unchanged.
   if (
     saved &&
     (saved.thread_id !== thread.id ||
-      JSON.parse(saved.body).message !== contextual)
+      (savedBody.message !== message &&
+        (savedBody.context || publicText(savedBody.message) !== message)))
   )
     throw new HttpError(409, "请求标识已用于其他内容");
   if (saved?.state === "failed")
@@ -220,7 +242,8 @@ export async function sendMessage(
     saved?.body ??
     JSON.stringify({
       userId: platformUser(thread),
-      message: contextual,
+      message,
+      context: { data: demoContextData(thread) },
       ...(thread.upstream_id ? { conversationId: thread.upstream_id } : {}),
       stream: true,
     });
